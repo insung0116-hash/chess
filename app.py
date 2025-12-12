@@ -13,7 +13,7 @@ st.title("🤖 인공지능과 체스 대결")
 if 'board' not in st.session_state:
     st.session_state.board = chess.Board()
 
-# [NEW] 앞으로 가기(Redo)를 위한 임시 저장소
+# 앞으로 가기(Redo)를 위한 임시 저장소
 if 'redo_stack' not in st.session_state:
     st.session_state.redo_stack = []
 
@@ -38,21 +38,16 @@ with st.sidebar:
     st.markdown("---")
     st.header("게임 제어")
     
-    # 버튼을 가로로 배치
     b_col1, b_col2 = st.columns(2)
     
     # [무르기 (Undo)]
     with b_col1:
         if st.button("⬅️ 뒤로 (Undo)"):
             if len(board.move_stack) >= 2:
-                # 1. AI 수 취소 및 저장
                 ai_move = board.pop()
                 st.session_state.redo_stack.append(ai_move)
-                
-                # 2. 내 수 취소 및 저장
                 my_move = board.pop()
                 st.session_state.redo_stack.append(my_move)
-                
                 st.toast("두 수 물렀습니다.")
                 st.rerun()
             else:
@@ -62,15 +57,10 @@ with st.sidebar:
     with b_col2:
         if st.button("➡️ 앞으로 (Redo)"):
             if len(st.session_state.redo_stack) >= 2:
-                # 1. 내 수 복구
-                # 스택은 LIFO(Last In First Out)이므로 나중에 넣은 내 수가 먼저 나옴
                 my_move = st.session_state.redo_stack.pop()
                 board.push(my_move)
-                
-                # 2. AI 수 복구
                 ai_move = st.session_state.redo_stack.pop()
                 board.push(ai_move)
-                
                 st.toast("다시 앞으로 갔습니다.")
                 st.rerun()
             else:
@@ -79,12 +69,11 @@ with st.sidebar:
     # [새 게임]
     if st.button("🔄 새 게임 시작", use_container_width=True):
         st.session_state.board = chess.Board()
-        st.session_state.redo_stack = [] # 저장된 미래도 초기화
+        st.session_state.redo_stack = []
         st.rerun()
     
     st.markdown("---")
     
-    # 상태 표시
     if board.turn == chess.WHITE:
         st.info("🟢 당신의 차례 (White)")
     else:
@@ -95,7 +84,6 @@ with st.sidebar:
     if board.is_game_over():
         st.error(f"게임 종료! 결과: {board.result()}")
     
-    # 기록 표시
     with st.expander("📜 이동 기록"):
         move_log = []
         temp_board = chess.Board()
@@ -134,10 +122,9 @@ with col2:
                 move = board.parse_san(user_move)
                 if move in board.legal_moves:
                     
-                    # [중요] 새로운 수를 두면, 저장해둔 미래(redo_stack)는 무효화됨
-                    st.session_state.redo_stack = []
+                    st.session_state.redo_stack = [] # 미래 초기화
                     
-                    board.push(move)
+                    board.push(move) # 나의 수 착수
                     
                     # AI 턴
                     if not board.is_game_over():
@@ -145,8 +132,13 @@ with col2:
                             time.sleep(0.3)
                             ai_move = get_ai_move(board)
                             if ai_move:
-                                board.push(ai_move)
-                                st.toast(f"AI: {board.san(ai_move)}")
+                                # [수정된 부분] 
+                                # AI가 두기 전에 기보(이름)를 먼저 계산해야 오류가 안 납니다!
+                                ai_san = board.san(ai_move) 
+                                
+                                board.push(ai_move) # AI 수 착수
+                                
+                                st.toast(f"AI: {ai_san}")
                     
                     st.rerun()
                 else:
