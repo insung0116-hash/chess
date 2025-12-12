@@ -1,13 +1,14 @@
 import streamlit as st
 import chess
 import chess.svg
-import time
+import chess.engine
+import shutil
 
 # --- 페이지 설정 ---
-st.set_page_config(page_title="Strategic Chess AI", page_icon="♟️", layout="wide")
+st.set_page_config(page_title="Grandmaster Chess", page_icon="🏆", layout="wide")
 
-st.title("♟️ 전략가 AI와 체스 대결")
-st.markdown("캐슬링, 앙파상 등 **체스의 모든 규칙**이 지원됩니다.")
+st.title("🏆 그랜드마스터 AI (Stockfish)")
+st.markdown("세계 최강 엔진 **Stockfish**가 탑재되었습니다. 이제 진짜 체스를 경험해보세요.")
 
 # --- 1. 게임 상태 초기화 ---
 if 'board' not in st.session_state:
@@ -17,159 +18,68 @@ if 'redo_stack' not in st.session_state:
     st.session_state.redo_stack = []
 
 board = st.session_state.board
-redo_stack = st.session_state.redo_stack
 
-# --- 2. AI 엔진 (전략적 평가 함수 & 미니맥스) ---
+# --- 2. 스톡피쉬 엔진 경로 찾기 ---
+# 시스템에 설치된 stockfish의 위치를 찾습니다.
+stockfish_path = shutil.which("stockfish")
 
-# 기물 기본 점수
-piece_values = {
-    chess.PAWN: 100,
-    chess.KNIGHT: 320,
-    chess.BISHOP: 330,
-    chess.ROOK: 500,
-    chess.QUEEN: 900,
-    chess.KING: 20000
-}
+# 로컬(내 컴퓨터) 테스트용 경로 (필요시 수정)
+if stockfish_path is None:
+    # 윈도우나 맥 등 로컬에서 돌릴 땐 경로를 직접 지정해야 할 수도 있습니다.
+    # 예: stockfish_path = "/usr/games/stockfish" 
+    pass
 
-# 위치 점수표 (PST) - AI가 똑똑하게 두기 위한 위치 데이터
-pawntable = [
-    0,  0,  0,  0,  0,  0,  0,  0,
-    50, 50, 50, 50, 50, 50, 50, 50,
-    10, 10, 20, 30, 30, 20, 10, 10,
-    5,  5, 10, 25, 25, 10,  5,  5,
-    0,  0,  0, 20, 20,  0,  0,  0,
-    5, -5,-10,  0,  0,-10, -5,  5,
-    5, 10, 10,-20,-20, 10, 10,  5,
-    0,  0,  0,  0,  0,  0,  0,  0
-]
-knightstable = [
-    -50,-40,-30,-30,-30,-30,-40,-50,
-    -40,-20,  0,  0,  0,  0,-20,-40,
-    -30,  0, 10, 15, 15, 10,  0,-30,
-    -30,  5, 15, 20, 20, 15,  5,-30,
-    -30,  0, 15, 20, 20, 15,  0,-30,
-    -30,  5, 10, 15, 15, 10,  5,-30,
-    -40,-20,  0,  5,  5,  0,-20,-40,
-    -50,-40,-30,-30,-30,-30,-40,-50
-]
-bishopstable = [
-    -20,-10,-10,-10,-10,-10,-10,-20,
-    -10,  0,  0,  0,  0,  0,  0,-10,
-    -10,  0,  5, 10, 10,  5,  0,-10,
-    -10,  5,  5, 10, 10,  5,  5,-10,
-    -10,  0, 10, 10, 10, 10,  0,-10,
-    -10, 10, 10, 10, 10, 10, 10,-10,
-    -10,  5,  0,  0,  0,  0,  5,-10,
-    -20,-10,-10,-10,-10,-10,-10,-20
-]
-rookstable = [
-    0,  0,  0,  0,  0,  0,  0,  0,
-    5, 10, 10, 10, 10, 10, 10,  5,
-    -5,  0,  0,  0,  0,  0,  0, -5,
-    -5,  0,  0,  0,  0,  0,  0, -5,
-    -5,  0,  0,  0,  0,  0,  0, -5,
-    -5,  0,  0,  0,  0,  0,  0, -5,
-    -5,  0,  0,  0,  0,  0,  0, -5,
-    0,  0,  0,  5,  5,  0,  0,  0
-]
-queenstable = [
-    -20,-10,-10, -5, -5,-10,-10,-20,
-    -10,  0,  0,  0,  0,  0,  0,-10,
-    -10,  0,  5,  5,  5,  5,  0,-10,
-     -5,  0,  5,  5,  5,  5,  0, -5,
-      0,  0,  5,  5,  5,  5,  0, -5,
-    -10,  5,  5,  5,  5,  5,  0,-10,
-    -10,  0,  5,  0,  0,  0,  0,-10,
-    -20,-10,-10, -5, -5,-10,-10,-20
-]
-kingstable = [
-    -30,-40,-40,-50,-50,-40,-40,-30,
-    -30,-40,-40,-50,-50,-40,-40,-30,
-    -30,-40,-40,-50,-50,-40,-40,-30,
-    -30,-40,-40,-50,-50,-40,-40,-30,
-    -20,-30,-30,-40,-40,-30,-30,-20,
-    -10,-20,-20,-20,-20,-20,-20,-10,
-     20, 20,  0,  0,  0,  0, 20, 20,
-     20, 30, 10,  0,  0, 10, 30, 20
-]
+# --- 3. AI 함수 (엔진 사용) ---
+def get_engine_move(board, skill_level=1, time_limit=0.1):
+    """
+    Stockfish 엔진을 사용하여 수를 둡니다.
+    skill_level: 0 (가장 못함) ~ 20 (신)
+    time_limit: 생각하는 시간 (초)
+    """
+    if stockfish_path is None:
+        return None
 
-def evaluate_board(board):
-    if board.is_checkmate():
-        if board.turn: return -99999
-        else: return 99999
-    if board.is_stalemate() or board.is_insufficient_material(): return 0
+    try:
+        # 엔진 실행
+        engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
+        
+        # 난이도 설정
+        engine.configure({"Skill Level": skill_level})
+        
+        # 수 계산 요청
+        result = engine.play(board, chess.engine.Limit(time=time_limit))
+        
+        # 엔진 종료
+        engine.quit()
+        
+        return result.move
+    except Exception as e:
+        st.error(f"엔진 오류: {e}")
+        return None
 
-    score = 0
-    for square in chess.SQUARES:
-        piece = board.piece_at(square)
-        if piece:
-            value = piece_values[piece.piece_type]
-            if piece.piece_type == chess.PAWN: table = pawntable
-            elif piece.piece_type == chess.KNIGHT: table = knightstable
-            elif piece.piece_type == chess.BISHOP: table = bishopstable
-            elif piece.piece_type == chess.ROOK: table = rookstable
-            elif piece.piece_type == chess.QUEEN: table = queenstable
-            elif piece.piece_type == chess.KING: table = kingstable
-            else: table = [0]*64
-
-            if piece.color == chess.WHITE:
-                score += (value + table[square])
-            else:
-                score -= (value + table[chess.square_mirror(square)])
-    return score
-
-def minimax(board, depth, alpha, beta, maximizing_player):
-    if depth == 0 or board.is_game_over():
-        return evaluate_board(board)
-
-    legal_moves = list(board.legal_moves)
-    legal_moves.sort(key=lambda move: board.is_capture(move), reverse=True)
-
-    if maximizing_player:
-        max_eval = -float('inf')
-        for move in legal_moves:
-            board.push(move)
-            eval = minimax(board, depth - 1, alpha, beta, False)
-            board.pop()
-            max_eval = max(max_eval, eval)
-            alpha = max(alpha, eval)
-            if beta <= alpha: break
-        return max_eval
-    else:
-        min_eval = float('inf')
-        for move in legal_moves:
-            board.push(move)
-            eval = minimax(board, depth - 1, alpha, beta, True)
-            board.pop()
-            min_eval = min(min_eval, eval)
-            beta = min(beta, eval)
-            if beta <= alpha: break
-        return min_eval
-
-def get_best_move(board, depth):
-    best_move = None
-    best_value = float('inf')
-    legal_moves = list(board.legal_moves)
-    legal_moves.sort(key=lambda move: board.is_capture(move), reverse=True)
-
-    for move in legal_moves:
-        board.push(move)
-        board_value = minimax(board, depth - 1, -float('inf'), float('inf'), True)
-        board.pop()
-        if board_value < best_value:
-            best_value = board_value
-            best_move = move
-    return best_move
-
-# --- 3. 사이드바 ---
+# --- 4. 사이드바 ---
 with st.sidebar:
-    st.header("⚙️ 설정")
+    st.header("⚙️ 게임 설정")
     board_size = st.slider("체스판 크기", 300, 1000, 600, 50)
-    difficulty = st.selectbox("AI 난이도", ["초급 (Depth 1)", "중급 (Depth 2)", "고급 (Depth 3)"])
-    ai_depth = 1 if "초급" in difficulty else (2 if "중급" in difficulty else 3)
+    
+    # [NEW] 스톡피쉬 난이도 조절
+    st.markdown("### 🤖 AI 수준 (Elo)")
+    difficulty = st.select_slider(
+        "난이도를 선택하세요",
+        options=["입문자 (Lv 0)", "초보 (Lv 3)", "중수 (Lv 7)", "고수 (Lv 12)", "그랜드마스터 (Lv 20)"],
+        value="초보 (Lv 3)"
+    )
+    
+    # 선택된 텍스트를 숫자로 변환
+    if "Lv 0" in difficulty: skill = 0
+    elif "Lv 3" in difficulty: skill = 3
+    elif "Lv 7" in difficulty: skill = 7
+    elif "Lv 12" in difficulty: skill = 12
+    else: skill = 20
 
     st.markdown("---")
-    st.header("제어")
+    
+    # 제어 버튼들
     c1, c2 = st.columns(2)
     with c1:
         if st.button("⬅️ 무르기"):
@@ -190,13 +100,13 @@ with st.sidebar:
         st.session_state.board = chess.Board()
         st.session_state.redo_stack = []
         st.rerun()
-    
+
+    if stockfish_path is None:
+        st.error("⚠️ Stockfish 엔진을 찾을 수 없습니다. packages.txt 파일을 확인하세요.")
+
     st.markdown("---")
     if board.turn == chess.WHITE: st.info("🟢 당신의 차례")
     else: st.warning("🔴 AI 생각 중...")
-
-    if board.is_check(): st.warning("⚠️ 체크!")
-    if board.is_game_over(): st.error(f"게임 종료! {board.result()}")
     
     with st.expander("📜 이동 기록"):
         move_log = []
@@ -208,7 +118,7 @@ with st.sidebar:
             else: move_log[-1] += f" {san}"
         st.text("\n".join(move_log))
 
-# --- 4. 메인 화면 ---
+# --- 5. 메인 화면 ---
 col1, col2 = st.columns([2, 1])
 
 with col1:
@@ -218,24 +128,19 @@ with col1:
 
 with col2:
     st.markdown("### 🕹️ 조작 및 특수 규칙")
-    
-    # [NEW] 특수 규칙 설명 추가
-    with st.expander("🏰 캐슬링 & 특수 규칙 입력법", expanded=True):
+    with st.expander("규칙 가이드", expanded=True):
         st.markdown("""
-        - **기본 이동**: `e4`, `Nf3`, `Bxc4`
-        - **🏰 캐슬링 (Castling)**:
-            - 킹사이드 (오른쪽): **`O-O`** (대문자 O)
-            - 퀸사이드 (왼쪽): **`O-O-O`**
-        - **♟️ 앙파상 (En Passant)**:
-            - 그냥 잡는 위치를 입력 (예: **`exd6`**)
-        - **👑 프로모션 (승격)**:
-            - 도착 위치 + 기물 (예: **`e8Q`**, `a1R`)
+        - **입력**: `e4`, `Nf3`, `O-O` (캐슬링)
+        - **난이도 설명**:
+            - **입문자**: 마구잡이로 두기도 합니다.
+            - **중수**: 웬만한 사람은 이기기 힘듭니다.
+            - **그랜드마스터**: 인류 최강 수준입니다. 절대 못 이깁니다.
         """)
 
     if not board.is_game_over():
         with st.form(key='move_form'):
             user_move = st.text_input("나의 수 입력", key="input", placeholder="예: e4, O-O")
-            submit = st.form_submit_button("두기 (Move)")
+            submit = st.form_submit_button("두기")
             
         if submit and user_move:
             try:
@@ -245,17 +150,24 @@ with col2:
                     board.push(move)
                     
                     if not board.is_game_over():
-                        with st.spinner("AI가 전략을 구상 중입니다..."):
-                            time.sleep(0.1)
-                            ai_move = get_best_move(board, depth=ai_depth)
+                        with st.spinner("AI가 최적의 수를 찾는 중..."):
+                            # 엔진 호출
+                            ai_move = get_engine_move(board, skill_level=skill, time_limit=0.5)
+                            
                             if ai_move:
                                 ai_san = board.san(ai_move)
                                 board.push(ai_move)
-                                st.toast(f"AI: {ai_san}")
+                                st.toast(f"AI ({difficulty}): {ai_san}")
+                            else:
+                                st.error("AI 엔진 오류 발생")
                     st.rerun()
                 else:
-                    st.error("규칙 위반이거나 불가능한 수입니다.")
+                    st.error("불가능한 수입니다.")
             except ValueError:
-                st.error("잘못된 표기법입니다. (예: O-O, e8Q)")
+                st.error("표기법 오류입니다.")
     else:
-        st.success("게임이 끝났습니다!")
+        if board.is_checkmate():
+            winner = "흑(AI)" if board.turn == chess.WHITE else "백(당신)"
+            st.success(f"체크메이트! {winner} 승리!")
+        else:
+            st.info(f"게임 종료: {board.result()}")
