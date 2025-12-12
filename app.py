@@ -6,7 +6,6 @@ import chess.svg
 st.set_page_config(page_title="Streamlit Chess", page_icon="♟️")
 
 st.title("♟️ Streamlit 체스")
-st.markdown("라이브러리 호환성 문제로 인해 **텍스트 입력 방식**으로 전환되었습니다.")
 st.markdown("기보(예: `e4`, `Nf3`)를 입력하여 플레이하세요.")
 
 # --- 1. 게임 상태 초기화 ---
