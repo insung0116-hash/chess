@@ -3,12 +3,13 @@ import chess
 import chess.svg
 import chess.engine
 import shutil
+import os
 
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Grandmaster Chess", page_icon="🏆", layout="wide")
 
 st.title("🏆 그랜드마스터 AI (Stockfish)")
-st.markdown("세계 최강 엔진 **Stockfish**가 탑재되었습니다. 이제 진짜 체스를 경험해보세요.")
+st.markdown("세계 최강 엔진 **Stockfish**가 탑재되었습니다.")
 
 # --- 1. 게임 상태 초기화 ---
 if 'board' not in st.session_state:
@@ -19,42 +20,36 @@ if 'redo_stack' not in st.session_state:
 
 board = st.session_state.board
 
-# --- 2. 스톡피쉬 엔진 경로 찾기 ---
-# 시스템에 설치된 stockfish의 위치를 찾습니다.
+# --- 2. 스톡피쉬 엔진 경로 찾기 (수정됨) ---
+# 1순위: 시스템 환경변수에서 찾기
 stockfish_path = shutil.which("stockfish")
 
-# 로컬(내 컴퓨터) 테스트용 경로 (필요시 수정)
+# 2순위: 못 찾았다면, 리눅스(Streamlit Cloud) 기본 설치 경로들 확인
 if stockfish_path is None:
-    # 윈도우나 맥 등 로컬에서 돌릴 땐 경로를 직접 지정해야 할 수도 있습니다.
-    # 예: stockfish_path = "/usr/games/stockfish" 
-    pass
+    possible_paths = [
+        "/usr/games/stockfish",
+        "/usr/bin/stockfish",
+        "/usr/local/bin/stockfish"
+    ]
+    for path in possible_paths:
+        if os.path.exists(path):
+            stockfish_path = path
+            break
 
 # --- 3. AI 함수 (엔진 사용) ---
 def get_engine_move(board, skill_level=1, time_limit=0.1):
-    """
-    Stockfish 엔진을 사용하여 수를 둡니다.
-    skill_level: 0 (가장 못함) ~ 20 (신)
-    time_limit: 생각하는 시간 (초)
-    """
     if stockfish_path is None:
         return None
 
     try:
-        # 엔진 실행
         engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
-        
-        # 난이도 설정
         engine.configure({"Skill Level": skill_level})
-        
-        # 수 계산 요청
         result = engine.play(board, chess.engine.Limit(time=time_limit))
-        
-        # 엔진 종료
         engine.quit()
-        
         return result.move
     except Exception as e:
-        st.error(f"엔진 오류: {e}")
+        # 에러 발생 시 로그 출력
+        print(f"Engine Error: {e}")
         return None
 
 # --- 4. 사이드바 ---
@@ -62,7 +57,6 @@ with st.sidebar:
     st.header("⚙️ 게임 설정")
     board_size = st.slider("체스판 크기", 300, 1000, 600, 50)
     
-    # [NEW] 스톡피쉬 난이도 조절
     st.markdown("### 🤖 AI 수준 (Elo)")
     difficulty = st.select_slider(
         "난이도를 선택하세요",
@@ -70,7 +64,6 @@ with st.sidebar:
         value="초보 (Lv 3)"
     )
     
-    # 선택된 텍스트를 숫자로 변환
     if "Lv 0" in difficulty: skill = 0
     elif "Lv 3" in difficulty: skill = 3
     elif "Lv 7" in difficulty: skill = 7
@@ -79,7 +72,6 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # 제어 버튼들
     c1, c2 = st.columns(2)
     with c1:
         if st.button("⬅️ 무르기"):
@@ -101,8 +93,11 @@ with st.sidebar:
         st.session_state.redo_stack = []
         st.rerun()
 
-    if stockfish_path is None:
-        st.error("⚠️ Stockfish 엔진을 찾을 수 없습니다. packages.txt 파일을 확인하세요.")
+    # 경로 확인용 디버깅 메시지 (성공하면 경로가 보임)
+    if stockfish_path:
+        st.success(f"엔진 연결됨: {stockfish_path}")
+    else:
+        st.error("⚠️ Stockfish 엔진을 찾을 수 없습니다. packages.txt를 확인하고 앱을 Reboot하세요.")
 
     st.markdown("---")
     if board.turn == chess.WHITE: st.info("🟢 당신의 차례")
@@ -150,16 +145,15 @@ with col2:
                     board.push(move)
                     
                     if not board.is_game_over():
-                        with st.spinner("AI가 최적의 수를 찾는 중..."):
-                            # 엔진 호출
+                        with st.spinner("AI가 생각 중..."):
                             ai_move = get_engine_move(board, skill_level=skill, time_limit=0.5)
                             
                             if ai_move:
                                 ai_san = board.san(ai_move)
                                 board.push(ai_move)
-                                st.toast(f"AI ({difficulty}): {ai_san}")
+                                st.toast(f"AI: {ai_san}")
                             else:
-                                st.error("AI 엔진 오류 발생")
+                                st.error("AI 엔진 응답 없음")
                     st.rerun()
                 else:
                     st.error("불가능한 수입니다.")
