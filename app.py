@@ -13,21 +13,24 @@ st.title("🤖 인공지능과 체스 대결")
 if 'board' not in st.session_state:
     st.session_state.board = chess.Board()
 
+# [NEW] 앞으로 가기(Redo)를 위한 임시 저장소
+if 'redo_stack' not in st.session_state:
+    st.session_state.redo_stack = []
+
 board = st.session_state.board
+redo_stack = st.session_state.redo_stack
 
 # --- 2. 간단한 AI 함수 ---
 def get_ai_move(curr_board):
     legal_moves = list(curr_board.legal_moves)
     if not legal_moves:
         return None
-    # 공격 기회(Capture)가 있으면 우선 선택
     for move in legal_moves:
         if curr_board.is_capture(move):
             return move
-    # 없으면 무작위
     return random.choice(legal_moves)
 
-# --- 3. 사이드바: 설정 및 게임 제어 ---
+# --- 3. 사이드바: 설정 및 제어 ---
 with st.sidebar:
     st.header("⚙️ 게임 설정")
     board_size = st.slider("체스판 크기 조절 (px)", 300, 1000, 600, 50)
@@ -35,24 +38,48 @@ with st.sidebar:
     st.markdown("---")
     st.header("게임 제어")
     
-    # [NEW] 무르기 버튼
-    # AI와 대결 중이므로 내 수 + AI 수 = 총 2번을 되돌려야 함
-    if st.button("↩️ 무르기 (Undo)"):
-        if len(board.move_stack) >= 2:
-            board.pop() # AI의 수 취소
-            board.pop() # 나의 수 취소
-            st.toast("한 수 물렀습니다! 다시 생각해보세요.")
-            st.rerun()
-        elif len(board.move_stack) == 1:
-            # 혹시 한 수만 두어진 상태라면 하나만 취소
-            board.pop()
-            st.rerun()
-        else:
-            st.warning("더 이상 무를 수가 없습니다 (게임 시작 상태).")
+    # 버튼을 가로로 배치
+    b_col1, b_col2 = st.columns(2)
+    
+    # [무르기 (Undo)]
+    with b_col1:
+        if st.button("⬅️ 뒤로 (Undo)"):
+            if len(board.move_stack) >= 2:
+                # 1. AI 수 취소 및 저장
+                ai_move = board.pop()
+                st.session_state.redo_stack.append(ai_move)
+                
+                # 2. 내 수 취소 및 저장
+                my_move = board.pop()
+                st.session_state.redo_stack.append(my_move)
+                
+                st.toast("두 수 물렀습니다.")
+                st.rerun()
+            else:
+                st.warning("더 이상 뒤로 갈 수 없습니다.")
 
-    # 새 게임 버튼
-    if st.button("🔄 새 게임 시작"):
+    # [앞으로 가기 (Redo)]
+    with b_col2:
+        if st.button("➡️ 앞으로 (Redo)"):
+            if len(st.session_state.redo_stack) >= 2:
+                # 1. 내 수 복구
+                # 스택은 LIFO(Last In First Out)이므로 나중에 넣은 내 수가 먼저 나옴
+                my_move = st.session_state.redo_stack.pop()
+                board.push(my_move)
+                
+                # 2. AI 수 복구
+                ai_move = st.session_state.redo_stack.pop()
+                board.push(ai_move)
+                
+                st.toast("다시 앞으로 갔습니다.")
+                st.rerun()
+            else:
+                st.warning("복구할 미래가 없습니다.")
+
+    # [새 게임]
+    if st.button("🔄 새 게임 시작", use_container_width=True):
         st.session_state.board = chess.Board()
+        st.session_state.redo_stack = [] # 저장된 미래도 초기화
         st.rerun()
     
     st.markdown("---")
@@ -68,7 +95,7 @@ with st.sidebar:
     if board.is_game_over():
         st.error(f"게임 종료! 결과: {board.result()}")
     
-    # 이동 기록
+    # 기록 표시
     with st.expander("📜 이동 기록"):
         move_log = []
         temp_board = chess.Board()
@@ -81,29 +108,22 @@ with st.sidebar:
                 move_log[-1] += f" {san}"
         st.text("\n".join(move_log))
 
-# --- 4. 레이아웃 구성 ---
+# --- 4. 레이아웃 ---
 col1, col2 = st.columns([2, 1])
 
 with col1:
     last_move = board.peek() if board.move_stack else None
-    board_svg = chess.svg.board(
-        board=board, 
-        lastmove=last_move,
-        size=board_size
-    )
-    st.markdown(
-        f'<div style="display: flex; justify-content: center;">{board_svg}</div>',
-        unsafe_allow_html=True
-    )
+    board_svg = chess.svg.board(board=board, lastmove=last_move, size=board_size)
+    st.markdown(f'<div style="display: flex; justify-content: center;">{board_svg}</div>', unsafe_allow_html=True)
 
 with col2:
     st.markdown("### 🕹️ 조작 방법")
     st.markdown("""
-    - **이동**: `e4`, `Nf3`, `Bxc4` 등을 입력하고 엔터.
-    - **무르기**: 사이드바의 '무르기' 버튼 사용.
+    - **입력**: `e4`, `Nf3` 등 입력 후 엔터.
+    - **탐색**: '뒤로', '앞으로' 버튼으로 시점을 이동할 수 있습니다.
+    - **주의**: 과거로 돌아가서 **새로운 수**를 두면, '앞으로 가기' 목록은 사라집니다.
     """)
 
-    # --- 5. 게임 로직 ---
     if not board.is_game_over():
         with st.form(key='move_form'):
             user_move = st.text_input("나의 수 입력", key="input", placeholder="예: e4, Nf3")
@@ -113,6 +133,10 @@ with col2:
             try:
                 move = board.parse_san(user_move)
                 if move in board.legal_moves:
+                    
+                    # [중요] 새로운 수를 두면, 저장해둔 미래(redo_stack)는 무효화됨
+                    st.session_state.redo_stack = []
+                    
                     board.push(move)
                     
                     # AI 턴
