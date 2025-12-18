@@ -1,2 +1,3 @@
-streamlit-chessboard
+streamlit
 chess
+git+https://github.com/tc11/streamlit-chessboard
