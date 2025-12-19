@@ -28,7 +28,7 @@ st.markdown("""
     section[data-testid="stMain"] div.stButton > button {
         width: 100% !important;
         aspect-ratio: 1 / 1;           /* 정사각형 유지 */
-        font-size: 40px !important;    /* 말 크기 (여기는 커야 함) */
+        font-size: 100px !important;    /* 말 크기 (여기는 커야 함) */
         font-weight: 500 !important;
         padding: 0px !important;
         margin: 0px !important;
