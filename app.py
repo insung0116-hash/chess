@@ -7,13 +7,14 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 체스말 확대 및 강제 정렬 ---
+# --- CSS: 체스판과 일반 버튼 스타일 분리 ---
 st.markdown("""
 <style>
-    /* 1. 기본 배경 및 간격 초기화 */
+    /* 1. 기본 배경 */
     .stApp { background-color: #f4f4f4; }
     
-    /* 메인 화면 컬럼 간격 완전 제거 */
+    /* 2. [중요] '메인 화면(체스판)' 영역의 간격만 없애기 */
+    /* 사이드바에는 영향을 주지 않도록 stMain 내부만 타겟팅 */
     section[data-testid="stMain"] div[data-testid="stHorizontalBlock"] {
         gap: 0px !important;
     }
@@ -23,66 +24,82 @@ st.markdown("""
         min-width: 0px !important;
     }
     
-    /* 2. [체스말 버튼] 스타일 (꽉 채우기) */
-    .chess-piece {
+    /* 3. [핵심 수정] 체스말 스타일은 '메인 화면'에 있는 버튼에만 적용 */
+    section[data-testid="stMain"] div.stButton > button {
         width: 100% !important;
-        aspect-ratio: 1 / 1;
-        font-size: 50px !important;    /* 말 크기: 50px */
+        aspect-ratio: 1 / 1;           /* 정사각형 유지 */
+        font-size: 40px !important;    /* 말 크기 (여기는 커야 함) */
+        font-weight: 500 !important;
         padding: 0px !important;
         margin: 0px !important;
         border: none !important;
         border-radius: 0px !important;
         line-height: 1 !important;
         box-shadow: none !important;
-        color: black !important;
-        background-color: transparent;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding-bottom: 8px !important; /* 수직 중앙 보정 */
+        color: #000000 !important;     /* 잉크색 검정 */
+        -webkit-text-fill-color: #000000 !important;
     }
 
-    /* 3. 색상 클래스 (CSS로 직접 색칠) */
-    .white-square { background-color: #FFCE9E !important; } /* 베이지 */
-    .black-square { background-color: #D18B47 !important; } /* 갈색 */
-    .active-square { background-color: #f7e034 !important; } /* 선택됨 */
-    
-    /* 4. 좌표 스타일 */
-    .rank-label {
-        display: flex; align-items: center; justify-content: center;
-        height: 100%; font-weight: 900; font-size: 18px; color: #555;
+    /* 4. 체스판 색상 (메인 화면 버튼만) */
+    section[data-testid="stMain"] div.stButton > button[kind="primary"] {
+        background-color: #D18B47 !important; /* 갈색 */
     }
-    .file-label {
-        display: flex; align-items: center; justify-content: center;
-        width: 100%; height: 50px; /* 높이 고정 */
-        font-weight: 900; font-size: 18px; color: #555;
-        margin-top: -5px;
+    section[data-testid="stMain"] div.stButton > button[kind="secondary"] {
+        background-color: #FFCE9E !important; /* 베이지 */
     }
-    
-    /* 5. 사이드바 버튼 복구 */
+    section[data-testid="stMain"] div.stButton > button:focus {
+        background-color: #f7e034 !important;
+        box-shadow: inset 0 0 0 4px #c7c734 !important;
+        z-index: 10;
+    }
+
+    /* 5. [사이드바 복구] 사이드바 버튼은 정상 크기로 되돌림 */
     section[data-testid="stSidebar"] div.stButton > button {
-        width: 100%; height: auto; aspect-ratio: auto;
-        font-size: 16px !important; border-radius: 8px;
-        padding: 0.5rem 1rem; margin-bottom: 10px;
+        width: 100%;
+        height: auto;
+        aspect-ratio: auto;        /* 정사각형 해제 */
+        font-size: 16px !important; /* 글자 크기 정상화 */
+        padding: 0.5rem 1rem;
+        margin-bottom: 10px;
+        border-radius: 8px;        /* 둥근 모서리 복구 */
     }
+
+    /* 6. 좌표 스타일 (작고 깔끔하게 유지) */
+    .coord-rank {
+        display: flex; align-items: center; justify-content: center;
+        height: 100%; font-weight: bold; font-size: 14px; color: #666; padding-right: 5px;
+    }
+    .coord-file {
+        display: flex; justify-content: center; align-items: flex-start;
+        font-weight: bold; font-size: 14px; color: #666; margin-top: 5px;
+    }
+    
+    iframe { display: none; }
 </style>
 """, unsafe_allow_html=True)
 
 # --- 세션 초기화 ---
-if 'board' not in st.session_state: st.session_state.board = chess.Board()
-if 'selected_square' not in st.session_state: st.session_state.selected_square = None
-if 'msg' not in st.session_state: st.session_state.msg = "게임을 시작합니다."
-if 'player_color' not in st.session_state: st.session_state.player_color = chess.WHITE
-if 'hint_move' not in st.session_state: st.session_state.hint_move = None
-if 'analysis_data' not in st.session_state: st.session_state.analysis_data = None
-if 'redo_stack' not in st.session_state: st.session_state.redo_stack = []
+if 'board' not in st.session_state:
+    st.session_state.board = chess.Board()
+if 'selected_square' not in st.session_state:
+    st.session_state.selected_square = None
+if 'msg' not in st.session_state:
+    st.session_state.msg = "게임을 시작합니다."
+if 'player_color' not in st.session_state:
+    st.session_state.player_color = chess.WHITE
+if 'hint_move' not in st.session_state:
+    st.session_state.hint_move = None
+if 'analysis_data' not in st.session_state:
+    st.session_state.analysis_data = None
+if 'redo_stack' not in st.session_state:
+    st.session_state.redo_stack = []
 
-# --- Stockfish 설정 ---
+# --- Stockfish ---
 stockfish_path = shutil.which("stockfish")
 if not stockfish_path and os.path.exists("/usr/games/stockfish"):
     stockfish_path = "/usr/games/stockfish"
 
-# --- 로직 함수들 ---
+# --- 로직 함수 ---
 def play_engine_move(skill_level):
     if not stockfish_path or st.session_state.board.is_game_over(): return
     try:
@@ -91,6 +108,7 @@ def play_engine_move(skill_level):
         result = engine.play(st.session_state.board, chess.engine.Limit(time=0.2))
         st.session_state.board.push(result.move)
         st.session_state.redo_stack = [] 
+        st.session_state.hint_move = None
         engine.quit()
         st.session_state.msg = "당신의 차례입니다."
     except: pass
@@ -106,6 +124,7 @@ def show_hint():
 
 def handle_click(sq):
     if st.session_state.board.turn != st.session_state.player_color: return
+    
     st.session_state.hint_move = None
     if st.session_state.selected_square is None:
         p = st.session_state.board.piece_at(sq)
@@ -160,84 +179,63 @@ def analyze_game():
 # ================= UI 레이아웃 =================
 st.title("♟️ Classic Chess")
 
+# --- 사이드바 ---
 with st.sidebar:
     st.header("설정")
     color_opt = st.radio("진영 선택", ["White (선공)", "Black (후공)"])
     new_color = chess.WHITE if "White" in color_opt else chess.BLACK
     skill = st.slider("AI 레벨", 0, 20, 3)
-    if st.button("🔄 게임 재시작", type="primary"):
+    
+    # 사이드바 버튼들은 이제 정상 크기로 나옵니다
+    if st.button("🔄 게임 재시작", type="primary", use_container_width=True):
         st.session_state.board = chess.Board()
         st.session_state.selected_square = None
         st.session_state.player_color = new_color
         st.session_state.redo_stack = []
         st.session_state.analysis_data = None
         st.rerun()
+
     st.divider()
     c1, c2 = st.columns(2)
     with c1: 
         if st.button("⬅️ 무르기"): undo_move(); st.rerun()
     with c2: 
         if st.button("➡️ 되살리기"): redo_move(); st.rerun()
+            
     if st.button("💡 힌트"): show_hint(); st.rerun()
 
-# --- 메인 보드 ---
+# --- 메인 화면 (체스판) ---
 main_col, info_col = st.columns([2, 1])
 
 with main_col:
+    # 이 영역(main_col) 안의 버튼만 CSS로 커지게 설정됨
     is_white = st.session_state.player_color == chess.WHITE
     ranks = range(7, -1, -1) if is_white else range(8)
     files = range(8) if is_white else range(7, -1, -1)
     file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-    # [중요] 비율 고정: 좌표(1) : 체스칸(2) * 8
-    # 이 비율을 위아래 똑같이 씁니다.
-    col_ratios = [0.8] + [2] * 8
+    col_ratios = [0.5] + [1] * 8
 
-    # 1. 체스판 루프
     for rank in ranks:
         cols = st.columns(col_ratios, gap="small")
-        
-        # [왼쪽 숫자 좌표]
-        cols[0].markdown(f"<div class='rank-label'>{rank + 1}</div>", unsafe_allow_html=True)
+        cols[0].markdown(f"<div class='coord-rank'>{rank + 1}</div>", unsafe_allow_html=True)
         
         for i, file in enumerate(files):
             sq = chess.square(file, rank)
             piece = st.session_state.board.piece_at(sq)
             symbol = piece.unicode_symbol() if piece else "⠀"
             
-            # CSS 클래스 결정을 위한 로직
             is_dark = (rank + file) % 2 == 0
-            bg_class = "black-square" if is_dark else "white-square"
-            
-            # 버튼 렌더링 (CSS 클래스 주입)
-            # help 인자를 이용해 CSS 타겟팅을 할 수도 있지만, 
-            # 여기서는 type="primary/secondary"와 CSS 선택자를 매칭합니다.
-            
-            # Streamlit 버튼은 색상 커스텀이 까다로워 CSS에서 nth-child나 속성 선택자를 씁니다.
-            # 하지만 간단히 하기 위해 'primary'와 'secondary'를 교차로 쓰고 
-            # CSS에서 색상을 강제 덮어쓰기 합니다 (위 style 태그 참조).
-            
             btn_type = "primary" if is_dark else "secondary"
             
-            # 버튼 클릭
             if cols[i+1].button(symbol, key=f"sq_{sq}", type=btn_type):
                 handle_click(sq)
                 st.rerun()
-                
-            # [핵심] 버튼에 CSS 클래스 강제 적용 (JS 없이 CSS 선택자로 처리됨)
-            # 위 CSS에서 .stButton > button[kind="primary"] 등으로 이미 색을 입혔습니다.
 
-    # 2. 하단 좌표 루프 (구조적 동기화)
     footer = st.columns(col_ratios, gap="small")
-    
-    # [핵심 트릭] 맨 앞칸에 '투명 버튼'을 넣습니다.
-    # st.empty()나 st.write("")를 쓰면 너비가 달라져서 줄이 깨집니다.
-    # 윗줄의 '좌표 숫자'가 차지하는 너비와 똑같은 공간을 확보하기 위함입니다.
-    footer[0].markdown("<div class='rank-label' style='opacity:0;'>X</div>", unsafe_allow_html=True)
-    
-    # 나머지 칸에 알파벳 좌표
+    footer[0].write("")
     for i, label in enumerate(file_labels):
-        footer[i+1].markdown(f"<div class='file-label'>{label}</div>", unsafe_allow_html=True)
+        footer[i+1].markdown(f"<div class='coord-file'>{label}</div>", unsafe_allow_html=True)
 
 with info_col:
     st.info(st.session_state.msg)
