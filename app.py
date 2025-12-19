@@ -57,7 +57,7 @@ st.markdown("""
         aspect-ratio: 1 / 1;
         
         font-size: 45px !important; 
-        transform: scale(3.0) !important;
+        transform: scale(2.0) !important;
         transform-origin: center center !important;
         
         color: #000000 !important;
