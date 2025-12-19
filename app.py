@@ -160,7 +160,7 @@ def handle_click(square_index):
                 st.session_state.msg = "이동 불가"
 
 # ================= UI 구성 =================
-st.title("♟️ AI와 체스하기 (Playing Chess with AI")
+st.title("♟️ AI와 체스하기 (Playing Chess with AI)")
 
 # 사이드바
 with st.sidebar:
