@@ -1,3 +1,3 @@
 streamlit
 chess
-git+https://github.com/andfanilo/streamlit-chessboard.git
+streamlit-chessboard
