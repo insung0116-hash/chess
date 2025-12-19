@@ -13,23 +13,42 @@ st.markdown("""
     /* 1. 배경 설정 */
     .stApp { background-color: #f4f4f4; }
     
-    /* 2-1. [핵심] 가로 블록(열 컨테이너)의 간격 강제 제거 */
+   /* 2-1. [핵심] 열(Column)별 누적 이동 (등차수열 적용) */
+    /* Streamlit의 gap이 누적되는 것을 상쇄하기 위해 뒤로 갈수록 더 많이 당깁니다 */
+    
+    /* 2번째 열 (체스판 A열) -> -16px */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(2) { margin-left: -16px !important; }
+    
+    /* 3번째 열 (체스판 B열) -> -32px */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(3) { margin-left: -32px !important; }
+    
+    /* 4번째 열 -> -48px */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(4) { margin-left: -48px !important; }
+    
+    /* 5번째 열 -> -64px */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(5) { margin-left: -64px !important; }
+    
+    /* 6번째 열 -> -80px */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(6) { margin-left: -80px !important; }
+    
+    /* 7번째 열 -> -96px */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(7) { margin-left: -96px !important; }
+    
+    /* 8번째 열 -> -112px */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(8) { margin-left: -112px !important; }
+    
+    /* 9번째 열 (체스판 H열) -> -128px */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(9) { margin-left: -128px !important; }
+
+    /* 2-2. 공통 레이아웃 정리 */
+    div[data-testid="column"] {
+        padding: 0px !important;
+        min-width: 0px !important;
+    }
     div[data-testid="stHorizontalBlock"] {
         gap: 0px !important;
         padding: 0px !important;
-    }
-
-    /* 2-2. [핵심] 개별 열(Column)의 여백 제거 및 꽉 채우기 */
-    div[data-testid="column"] {
-        padding: 0px !important;
-        margin: 0px !important;
-        flex: 1 1 auto !important; /* 비율대로 꽉 채움 */
-        min-width: 0px !important;
-    }
-    
-    /* 2-3. 열 내부의 '위젯 컨테이너' 간격 제거 (이중 안전장치) */
-    div[data-testid="column"] > div {
-        gap: 0px !important; 
+        overflow: visible !important; /* 당겨진 요소가 잘리지 않도록 */
     }
     
     /* 3. 체스말 버튼 (이전과 동일: 1.8배 확대) */
