@@ -13,21 +13,27 @@ st.markdown("""
     /* 전체 배경 */
     .stApp { background-color: #f0f2f6; }
     
-    /* 1. 수평/수직 간격 강제 제거 (제일 중요) */
-    [data-testid="column"] {
+    /* 1. 수평/수직 간격 강제 제거 (Gap 삭제) */
+    /* Streamlit의 수평 레이아웃 컨테이너를 직접 타격하여 간격을 없앱니다 */
+    div[data-testid="stHorizontalBlock"] {
+        gap: 0rem !important;
+    }
+    
+    /* 컬럼 내부 패딩 제거 */
+    div[data-testid="column"] {
         padding: 0 !important;
         margin: 0 !important;
         min-width: 0 !important;
-    }
-    [data-testid="stHorizontalBlock"] {
-        gap: 0 !important; /* 버튼 사이 틈 없애기 */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
 
     /* 2. 체스판 버튼 공통 스타일 */
     div.stButton > button {
         width: 100% !important;        /* 컬럼 너비 꽉 채우기 */
         aspect-ratio: 1 / 1;           /* 정사각형 비율 유지 */
-        font-size: 40px !important;    /* 말 크기 */
+        font-size: 42px !important;    /* 말 크기 */
         padding: 0px !important;
         margin: 0px !important;
         border-radius: 0px !important; /* 모서리 각지게 */
@@ -39,24 +45,29 @@ st.markdown("""
         justify-content: center;
     }
     
-    /* 3. 체크무늬 색상 구현 (Primary/Secondary 속성 활용) */
-    /* 밝은 칸 (Secondary Type) -> 베이지색 */
+    /* 3. 체크무늬 색상 구현 */
     div.stButton > button[kind="secondary"] {
-        background-color: #f0d9b5 !important;
+        background-color: #f0d9b5 !important; /* 밝은 칸 (베이지) */
         color: black !important;
+        border: none !important;
     }
-    /* 어두운 칸 (Primary Type) -> 갈색 */
     div.stButton > button[kind="primary"] {
-        background-color: #b58863 !important;
+        background-color: #b58863 !important; /* 어두운 칸 (갈색) */
         color: black !important;
+        border: none !important;
     }
 
-    /* 4. 선택된 말 / 포커스 효과 (노란색) */
+    /* 4. 선택/포커스 효과 */
     div.stButton > button:focus {
         background-color: #f7e034 !important;
-        border: 2px solid #e6bf00 !important;
-        z-index: 10; /* 다른 칸보다 위에 뜨게 */
-        transform: scale(1.05); /* 살짝 커짐 */
+        border: 3px solid #e6bf00 !important;
+        z-index: 999; 
+        transform: scale(1.02);
+        outline: none !important;
+    }
+    div.stButton > button:active {
+        background-color: #f7e034 !important;
+        color: black !important;
     }
 
     /* 5. 좌표 스타일 */
@@ -64,16 +75,19 @@ st.markdown("""
         display: flex;
         align-items: center;
         justify-content: center;
-        height: 100%; /* 버튼 높이와 맞춤 */
+        height: 100%;
         font-weight: bold;
-        font-size: 16px;
-        color: #555;
+        font-size: 18px;
+        color: #333;
     }
     .coord-file {
-        text-align: center;
+        display: flex;
+        align-items: flex-start; /* 글자를 위쪽으로 붙여서 보드와 가깝게 */
+        justify-content: center; /* 가로 중앙 정렬 */
+        width: 100%;
         font-weight: bold;
-        font-size: 16px;
-        color: #555;
+        font-size: 18px;
+        color: #333;
         padding-top: 5px;
     }
 
@@ -193,48 +207,45 @@ with st.sidebar:
         if st.button("💡 힌트"): show_hint(); st.rerun()
 
 # --- 메인 화면 레이아웃 ---
-# 보드(2) : 정보창(1) 비율
 main_col, info_col = st.columns([2, 1])
 
 with main_col:
-    # 흑/백 시점에 따라 랭크/파일 순서 결정
     is_white = st.session_state.player_color == chess.WHITE
     ranks = range(7, -1, -1) if is_white else range(8)
     files = range(8) if is_white else range(7, -1, -1)
     file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-    # --- 체스판 렌더링 루프 ---
+    # --- 1. 보드 렌더링 ---
     for rank in ranks:
-        # 좌측 좌표(0.5) + 8칸(1씩) 의 비율
+        # 비율: [좌측좌표(0.5)] + [체스칸 8개(1.0씩)]
         cols = st.columns([0.5] + [1]*8, gap="small")
         
-        # 1. 좌측 좌표 (1~8)
+        # 좌측 좌표 (1~8)
         cols[0].markdown(f"<div class='coord-rank'>{rank + 1}</div>", unsafe_allow_html=True)
         
-        # 2. 체스칸 (8개)
         for i, file in enumerate(files):
             sq = chess.square(file, rank)
             piece = st.session_state.board.piece_at(sq)
-            symbol = piece.unicode_symbol() if piece else "⠀" # 빈 공간은 특수공백
+            symbol = piece.unicode_symbol() if piece else "⠀"
             
-            # --- 색상 결정 로직 (중요) ---
-            # 체크무늬: (rank + file)이 홀수/짝수냐에 따라 색 결정
-            # Streamlit의 type="primary"를 '어두운 갈색칸'으로, "secondary"를 '밝은 베이지칸'으로 둔갑시킴
+            # 색상: (rank+file)%2==0 -> Dark(갈색/Primary)
             is_dark_square = (rank + file) % 2 == 0
             btn_type = "primary" if is_dark_square else "secondary"
             
-            # 선택된 칸이나 힌트 칸은 CSS focus가 처리하거나, 여기서 type을 바꿀 수도 있지만
-            # CSS :focus 효과가 가장 강력하므로 그대로 둡니다.
-
-            # 버튼 생성
             if cols[i+1].button(symbol, key=f"sq_{sq}", type=btn_type):
                 handle_click(sq)
                 st.rerun()
 
-    # --- 하단 좌표 (A~H) ---
-    # 위와 동일한 비율로 컬럼을 만들고 좌표를 배치
-    footer = st.columns([0.5] + [1]*8, gap="small")
+    # --- 2. 하단 좌표 (A~H) 수정됨 ---
+    # [중요] 첫 번째 빈 컬럼의 비율을 0.5 -> 0.2로 줄임
+    # 이렇게 하면 A~H가 전체적으로 왼쪽으로 당겨져서 정렬이 맞게 됩니다.
+    footer = st.columns([0.2] + [1]*8, gap="small")
+    
+    # 첫 번째 칸은 빈칸(좌표 없음)
+    footer[0].write("") 
+    
     for i, label in enumerate(file_labels):
+        # 좌표 텍스트 출력
         footer[i+1].markdown(f"<div class='coord-file'>{label}</div>", unsafe_allow_html=True)
 
 with info_col:
@@ -250,7 +261,6 @@ with info_col:
         st.line_chart(st.session_state.analysis_data)
         st.caption("그래프: 위(백 유리) / 아래(흑 유리)")
 
-# AI 턴
 if not st.session_state.board.is_game_over() and st.session_state.board.turn != st.session_state.player_color:
     play_engine_move(skill)
     st.rerun()
