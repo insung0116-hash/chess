@@ -23,14 +23,14 @@ st.markdown("""
         border-radius: 0px !important; /* 완전 사각형 */
         border: none !important;
         line-height: 1 !important;
-        background-color: transparent !important; /* 배경색은 상위 컨테이너 등에서 처리 불가하므로 기본값 덮어쓰기 위해 투명도 고려 */
+        background-color: transparent !important;
     }
     
     /* 버튼 클릭 시/포커스 시 */
     div.stButton > button:focus {
-        border: 4px solid #e6bf00 !important; /* 강조 테두리 두껍게 */
+        border: 4px solid #e6bf00 !important;
         color: black !important;
-        z-index: 99; /* 다른 요소보다 위에 표시 */
+        z-index: 99;
         transform: scale(1.02);
     }
 
@@ -39,7 +39,7 @@ st.markdown("""
         display: flex;
         justify-content: center;
         align-items: center;
-        height: 60px; /* 버튼 높이와 동일하게 */
+        height: 60px;
         font-size: 18px;
         font-weight: bold;
         color: #333;
@@ -52,7 +52,7 @@ st.markdown("""
         margin-bottom: 5px;
     }
 
-    /* 3. 컬럼 간격 완전 제거 */
+    /* 3. 컬럼 간격 완전 제거 (CSS로 강제 적용) */
     [data-testid="column"] {
         padding: 0 !important;
         gap: 0 !important;
@@ -182,24 +182,23 @@ with st.sidebar:
 col_board, col_right = st.columns([2, 1])
 
 with col_board:
-    # 흑백 진영에 따른 순서 결정
     is_white = st.session_state.player_color == chess.WHITE
     ranks = range(7, -1, -1) if is_white else range(8)
     files = range(8) if is_white else range(7, -1, -1)
     file_labels = ['a','b','c','d','e','f','g','h'] if is_white else ['h','g','f','e','d','c','b','a']
 
-    # 1. 상단 좌표 (File: a b c...)
-    # 레이아웃: [빈칸(좌표용)] + [8칸] + [빈칸]
+    # 1. 상단 좌표
     header_cols = st.columns([0.6] + [1]*8 + [0.6], gap="small")
     for i, label in enumerate(file_labels):
         header_cols[i+1].markdown(f"<div class='coord-header'>{label.upper()}</div>", unsafe_allow_html=True)
 
-    # 2. 보드 본문 (Rank + 8 Buttons + Rank)
+    # 2. 보드 본문
     for rank in ranks:
-        # 레이아웃: [좌측좌표] + [8칸] + [우측좌표]
-        row_cols = st.columns([0.6] + [1]*8 + [0.6], gap="0")
+        # 여기가 문제였던 부분입니다. gap="0" -> gap="small"로 수정했습니다.
+        # CSS가 강제로 간격을 없애주므로 디자인은 완벽합니다.
+        row_cols = st.columns([0.6] + [1]*8 + [0.6], gap="small")
         
-        # 좌측 좌표 (1~8)
+        # 좌측 좌표
         rank_label = str(rank + 1)
         row_cols[0].markdown(f"<div class='coord-text'>{rank_label}</div>", unsafe_allow_html=True)
         
@@ -208,16 +207,14 @@ with col_board:
             piece = st.session_state.board.piece_at(sq)
             symbol = piece.unicode_symbol() if piece else "⠀"
             
-            # 버튼 그리기
-            # CSS를 통해 크기는 60px, 폰트는 52px로 강제됨
             if row_cols[i+1].button(symbol, key=f"btn_{sq}"):
                 handle_click(sq)
                 st.rerun()
 
-        # 우측 좌표 (1~8) - 대칭을 위해
+        # 우측 좌표
         row_cols[-1].markdown(f"<div class='coord-text'>{rank_label}</div>", unsafe_allow_html=True)
 
-    # 3. 하단 좌표 (File: a b c...)
+    # 3. 하단 좌표
     footer_cols = st.columns([0.6] + [1]*8 + [0.6], gap="small")
     for i, label in enumerate(file_labels):
         footer_cols[i+1].markdown(f"<div class='coord-header'>{label.upper()}</div>", unsafe_allow_html=True)
@@ -235,7 +232,6 @@ with col_right:
         st.line_chart(st.session_state.analysis_data)
         st.caption("그래프 위쪽: 백 유리 / 아래쪽: 흑 유리")
 
-# AI 턴 실행
 if not st.session_state.board.is_game_over() and st.session_state.board.turn != st.session_state.player_color:
     play_engine_move(skill)
     st.rerun()
