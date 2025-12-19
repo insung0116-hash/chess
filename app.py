@@ -79,7 +79,7 @@ st.markdown("""
         margin-top: -5px;
         
         /* 여기를 조절하여 좌우 위치를 맞춥니다 (-값: 왼쪽, +값: 오른쪽) */
-        transform: translateX(-20px); 
+        transform: translateX(-40px); 
     }
 </style>
 """, unsafe_allow_html=True)
