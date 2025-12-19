@@ -2,6 +2,7 @@ import streamlit as st
 import chess
 import chess.engine
 import shutil
+import os  # <-- 맨 위 import 모여있는 곳에 이것도 추가해주세요!
 
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Streamlit Chess V2", page_icon="♟️", layout="wide")
@@ -44,7 +45,19 @@ if 'msg' not in st.session_state:
     st.session_state.msg = "게임을 시작합니다! 흰색(White) 차례입니다."
 
 # --- Stockfish 엔진 설정 ---
+
+# ... (중간 생략) ...
+
+# --- Stockfish 엔진 경로 설정 (수정된 부분) ---
+# 1. 시스템 PATH에서 찾기
 stockfish_path = shutil.which("stockfish")
+
+# 2. 못 찾았으면 리눅스 기본 설치 경로(/usr/games/) 확인
+if not stockfish_path:
+    if os.path.exists("/usr/games/stockfish"):
+        stockfish_path = "/usr/games/stockfish"
+
+# 3. 그래도 없으면 에러 메시지용으로 None 유지
 
 # --- AI 턴 함수 ---
 def play_engine_move():
