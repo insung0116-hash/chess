@@ -7,118 +7,82 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 레이아웃 강제 고정 (Flexbox Override) ---
+# --- CSS: 체스말 확대 및 강제 정렬 ---
 st.markdown("""
 <style>
-    /* 1. 기본 배경 */
+    /* 1. 기본 배경 및 간격 초기화 */
     .stApp { background-color: #f4f4f4; }
     
-    /* 2. 메인 화면의 모든 컬럼 간격(Gap) 제거 */
+    /* 메인 화면 컬럼 간격 완전 제거 */
     section[data-testid="stMain"] div[data-testid="stHorizontalBlock"] {
         gap: 0px !important;
     }
-    
-    /* 3. [핵심] 컬럼 너비 강제 조정 (Streamlit 비율 무시) 
-       - 메인 화면(stMain) 안에 있는 모든 가로줄(HorizontalBlock)의 컬럼을 타겟팅합니다.
-       - 첫 번째 컬럼(좌표 숫자)은 5%로 고정
-       - 나머지 컬럼(체스판/좌표 알파벳)은 남은 공간을 등분(flex: 1)
-    */
-    section[data-testid="stMain"] div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1) {
-        flex: 0 0 5% !important;
-        max-width: 5% !important;
-        min-width: 5% !important;
-    }
-    section[data-testid="stMain"] div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(n+2) {
-        flex: 1 1 auto !important;
-        min-width: 0px !important;
-    }
-
-    /* 4. 컬럼 내부 여백 제거 */
     section[data-testid="stMain"] div[data-testid="column"] {
         padding: 0px !important;
         margin: 0px !important;
+        min-width: 0px !important;
     }
     
-    /* 5. [초대형] 체스말 버튼 스타일 */
-    section[data-testid="stMain"] div.stButton > button {
+    /* 2. [체스말 버튼] 스타일 (꽉 채우기) */
+    .chess-piece {
         width: 100% !important;
-        aspect-ratio: 1 / 1;           /* 정사각형 유지 */
-        font-size: 65px !important;    /* 칸을 가득 채우는 크기 */
-        padding: 0px !important;       /* 패딩 0으로 설정해 공간 확보 */
+        aspect-ratio: 1 / 1;
+        font-size: 50px !important;    /* 말 크기: 50px */
+        padding: 0px !important;
         margin: 0px !important;
         border: none !important;
         border-radius: 0px !important;
-        line-height: 1.1 !important;   /* 줄 간격 조정으로 수직 중앙 정렬 */
+        line-height: 1 !important;
         box-shadow: none !important;
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-        
+        color: black !important;
+        background-color: transparent;
         display: flex;
         align-items: center;
         justify-content: center;
+        padding-bottom: 8px !important; /* 수직 중앙 보정 */
     }
 
-    /* 6. 체스판 색상 */
-    section[data-testid="stMain"] div.stButton > button[kind="primary"] {
-        background-color: #D18B47 !important; 
-    }
-    section[data-testid="stMain"] div.stButton > button[kind="secondary"] {
-        background-color: #FFCE9E !important; 
-    }
-    section[data-testid="stMain"] div.stButton > button:focus {
-        background-color: #f7e034 !important;
-        box-shadow: inset 0 0 0 4px #c7c734 !important;
-        z-index: 10;
-    }
-
-    /* 7. 사이드바 버튼 (정상 크기 유지) */
-    section[data-testid="stSidebar"] div.stButton > button {
-        width: 100%;
-        height: auto;
-        aspect-ratio: auto;
-        font-size: 16px !important;
-        padding: 0.5rem 1rem;
-        margin-bottom: 10px;
-        border-radius: 8px;
-    }
-
-    /* 8. 좌표 텍스트 스타일 */
-    .coord-rank {
+    /* 3. 색상 클래스 (CSS로 직접 색칠) */
+    .white-square { background-color: #FFCE9E !important; } /* 베이지 */
+    .black-square { background-color: #D18B47 !important; } /* 갈색 */
+    .active-square { background-color: #f7e034 !important; } /* 선택됨 */
+    
+    /* 4. 좌표 스타일 */
+    .rank-label {
         display: flex; align-items: center; justify-content: center;
-        height: 100%; font-weight: 900; font-size: 20px; color: #333;
+        height: 100%; font-weight: 900; font-size: 18px; color: #555;
     }
-    .coord-file {
-        display: flex; justify-content: center; 
-        font-weight: 900; font-size: 20px; color: #333;
-        margin-top: 5px; /* 약간의 여백 */
+    .file-label {
+        display: flex; align-items: center; justify-content: center;
+        width: 100%; height: 50px; /* 높이 고정 */
+        font-weight: 900; font-size: 18px; color: #555;
+        margin-top: -5px;
     }
     
-    iframe { display: none; }
+    /* 5. 사이드바 버튼 복구 */
+    section[data-testid="stSidebar"] div.stButton > button {
+        width: 100%; height: auto; aspect-ratio: auto;
+        font-size: 16px !important; border-radius: 8px;
+        padding: 0.5rem 1rem; margin-bottom: 10px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # --- 세션 초기화 ---
-if 'board' not in st.session_state:
-    st.session_state.board = chess.Board()
-if 'selected_square' not in st.session_state:
-    st.session_state.selected_square = None
-if 'msg' not in st.session_state:
-    st.session_state.msg = "게임을 시작합니다."
-if 'player_color' not in st.session_state:
-    st.session_state.player_color = chess.WHITE
-if 'hint_move' not in st.session_state:
-    st.session_state.hint_move = None
-if 'analysis_data' not in st.session_state:
-    st.session_state.analysis_data = None
-if 'redo_stack' not in st.session_state:
-    st.session_state.redo_stack = []
+if 'board' not in st.session_state: st.session_state.board = chess.Board()
+if 'selected_square' not in st.session_state: st.session_state.selected_square = None
+if 'msg' not in st.session_state: st.session_state.msg = "게임을 시작합니다."
+if 'player_color' not in st.session_state: st.session_state.player_color = chess.WHITE
+if 'hint_move' not in st.session_state: st.session_state.hint_move = None
+if 'analysis_data' not in st.session_state: st.session_state.analysis_data = None
+if 'redo_stack' not in st.session_state: st.session_state.redo_stack = []
 
-# --- Stockfish ---
+# --- Stockfish 설정 ---
 stockfish_path = shutil.which("stockfish")
 if not stockfish_path and os.path.exists("/usr/games/stockfish"):
     stockfish_path = "/usr/games/stockfish"
 
-# --- 로직 함수 ---
+# --- 로직 함수들 ---
 def play_engine_move(skill_level):
     if not stockfish_path or st.session_state.board.is_game_over(): return
     try:
@@ -127,7 +91,6 @@ def play_engine_move(skill_level):
         result = engine.play(st.session_state.board, chess.engine.Limit(time=0.2))
         st.session_state.board.push(result.move)
         st.session_state.redo_stack = [] 
-        st.session_state.hint_move = None
         engine.quit()
         st.session_state.msg = "당신의 차례입니다."
     except: pass
@@ -143,7 +106,6 @@ def show_hint():
 
 def handle_click(sq):
     if st.session_state.board.turn != st.session_state.player_color: return
-    
     st.session_state.hint_move = None
     if st.session_state.selected_square is None:
         p = st.session_state.board.piece_at(sq)
@@ -198,31 +160,27 @@ def analyze_game():
 # ================= UI 레이아웃 =================
 st.title("♟️ Classic Chess")
 
-# --- 사이드바 ---
 with st.sidebar:
     st.header("설정")
     color_opt = st.radio("진영 선택", ["White (선공)", "Black (후공)"])
     new_color = chess.WHITE if "White" in color_opt else chess.BLACK
     skill = st.slider("AI 레벨", 0, 20, 3)
-    
-    if st.button("🔄 게임 재시작", type="primary", use_container_width=True):
+    if st.button("🔄 게임 재시작", type="primary"):
         st.session_state.board = chess.Board()
         st.session_state.selected_square = None
         st.session_state.player_color = new_color
         st.session_state.redo_stack = []
         st.session_state.analysis_data = None
         st.rerun()
-
     st.divider()
     c1, c2 = st.columns(2)
     with c1: 
         if st.button("⬅️ 무르기"): undo_move(); st.rerun()
     with c2: 
         if st.button("➡️ 되살리기"): redo_move(); st.rerun()
-            
     if st.button("💡 힌트"): show_hint(); st.rerun()
 
-# --- 메인 화면 (체스판) ---
+# --- 메인 보드 ---
 main_col, info_col = st.columns([2, 1])
 
 with main_col:
@@ -231,41 +189,55 @@ with main_col:
     files = range(8) if is_white else range(7, -1, -1)
     file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-    # 비율 설정 (더 이상 CSS에 의해 무시되지만, 구조를 잡기 위해 1로 통일)
-    # 9개 컬럼 (1개 좌표 + 8개 보드)
-    # CSS에서 "첫번째는 5%, 나머지는 균등분배"라고 선언했으므로 여기 숫자는 1로 통일해도 됨
-    col_ratios = [1] * 9 
+    # [중요] 비율 고정: 좌표(1) : 체스칸(2) * 8
+    # 이 비율을 위아래 똑같이 씁니다.
+    col_ratios = [0.8] + [2] * 8
 
     # 1. 체스판 루프
     for rank in ranks:
         cols = st.columns(col_ratios, gap="small")
         
-        # 첫 번째 컬럼: 좌표 (CSS가 5% 너비로 강제함)
-        cols[0].markdown(f"<div class='coord-rank'>{rank + 1}</div>", unsafe_allow_html=True)
+        # [왼쪽 숫자 좌표]
+        cols[0].markdown(f"<div class='rank-label'>{rank + 1}</div>", unsafe_allow_html=True)
         
-        # 나머지 8개 컬럼: 체스말 (CSS가 나머지 공간 등분)
         for i, file in enumerate(files):
             sq = chess.square(file, rank)
             piece = st.session_state.board.piece_at(sq)
             symbol = piece.unicode_symbol() if piece else "⠀"
             
+            # CSS 클래스 결정을 위한 로직
             is_dark = (rank + file) % 2 == 0
+            bg_class = "black-square" if is_dark else "white-square"
+            
+            # 버튼 렌더링 (CSS 클래스 주입)
+            # help 인자를 이용해 CSS 타겟팅을 할 수도 있지만, 
+            # 여기서는 type="primary/secondary"와 CSS 선택자를 매칭합니다.
+            
+            # Streamlit 버튼은 색상 커스텀이 까다로워 CSS에서 nth-child나 속성 선택자를 씁니다.
+            # 하지만 간단히 하기 위해 'primary'와 'secondary'를 교차로 쓰고 
+            # CSS에서 색상을 강제 덮어쓰기 합니다 (위 style 태그 참조).
+            
             btn_type = "primary" if is_dark else "secondary"
             
+            # 버튼 클릭
             if cols[i+1].button(symbol, key=f"sq_{sq}", type=btn_type):
                 handle_click(sq)
                 st.rerun()
+                
+            # [핵심] 버튼에 CSS 클래스 강제 적용 (JS 없이 CSS 선택자로 처리됨)
+            # 위 CSS에서 .stButton > button[kind="primary"] 등으로 이미 색을 입혔습니다.
 
-    # 2. 하단 좌표 루프 (정확히 동일한 구조 사용)
+    # 2. 하단 좌표 루프 (구조적 동기화)
     footer = st.columns(col_ratios, gap="small")
     
-    # 첫 번째 컬럼: 빈 공간이지만 위와 '똑같은 구조'를 가져야 함
-    # CSS가 5% 너비를 보장함
-    footer[0].write("") 
+    # [핵심 트릭] 맨 앞칸에 '투명 버튼'을 넣습니다.
+    # st.empty()나 st.write("")를 쓰면 너비가 달라져서 줄이 깨집니다.
+    # 윗줄의 '좌표 숫자'가 차지하는 너비와 똑같은 공간을 확보하기 위함입니다.
+    footer[0].markdown("<div class='rank-label' style='opacity:0;'>X</div>", unsafe_allow_html=True)
     
-    # 나머지 8개 컬럼: A~H 좌표
+    # 나머지 칸에 알파벳 좌표
     for i, label in enumerate(file_labels):
-        footer[i+1].markdown(f"<div class='coord-file'>{label}</div>", unsafe_allow_html=True)
+        footer[i+1].markdown(f"<div class='file-label'>{label}</div>", unsafe_allow_html=True)
 
 with info_col:
     st.info(st.session_state.msg)
