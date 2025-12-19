@@ -7,13 +7,13 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 틈새 제거 및 좌표 미세 조정 ---
+# --- CSS: 사용자님의 '누적 이동' 아이디어 적용 ---
 st.markdown("""
 <style>
-    /* 1. 배경 설정 */
+    /* 1. 기본 배경 */
     .stApp { background-color: #f4f4f4; }
     
-   /* 2-1. [핵심] 열(Column)별 누적 이동 (등차수열 적용) */
+    /* 2. [핵심] 열(Column)별 누적 이동 (등차수열 적용) */
     /* Streamlit의 gap이 누적되는 것을 상쇄하기 위해 뒤로 갈수록 더 많이 당깁니다 */
     
     /* 2번째 열 (체스판 A열) -> -16px */
@@ -40,7 +40,7 @@ st.markdown("""
     /* 9번째 열 (체스판 H열) -> -128px */
     div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(9) { margin-left: -128px !important; }
 
-    /* 2-2. 공통 레이아웃 정리 */
+    /* 3. 공통 레이아웃 정리 */
     div[data-testid="column"] {
         padding: 0px !important;
         min-width: 0px !important;
@@ -50,11 +50,12 @@ st.markdown("""
         padding: 0px !important;
         overflow: visible !important; /* 당겨진 요소가 잘리지 않도록 */
     }
-    
-    /* 3. 체스말 버튼 (이전과 동일: 1.8배 확대) */
+
+    /* 4. 체스말 버튼 (1.8배 확대) */
     section[data-testid="stMain"] div.stButton > button {
         width: 100% !important;
         aspect-ratio: 1 / 1;
+        
         font-size: 45px !important; 
         transform: scale(1.8) !important;
         transform-origin: center center !important;
@@ -73,19 +74,22 @@ st.markdown("""
         padding-bottom: 8px !important; 
     }
 
-    /* 4. 체스판 색상 */
+    /* 5. 체스판 색상 */
     section[data-testid="stMain"] div.stButton > button[kind="primary"] {
         background-color: #D18B47 !important;
+        border: 0px !important;
     }
     section[data-testid="stMain"] div.stButton > button[kind="secondary"] {
         background-color: #FFCE9E !important;
+        border: 0px !important;
     }
     section[data-testid="stMain"] div.stButton > button:focus {
         background-color: #f7e034 !important;
-        z-index: 10;
+        z-index: 100; /* 겹쳐졌을 때 위로 올라오게 z-index 강화 */
+        outline: none !important;
     }
 
-    /* 5. 사이드바 버튼 (영향 받지 않도록 초기화) */
+    /* 6. 사이드바 버튼 보호 */
     section[data-testid="stSidebar"] div.stButton > button {
         width: 100%; height: auto; aspect-ratio: auto;
         font-size: 16px !important; transform: none !important;
@@ -93,21 +97,19 @@ st.markdown("""
         padding: 0.5rem 1rem; margin-bottom: 10px; border-radius: 8px;
     }
 
-    /* 6. 왼쪽 숫자 좌표 (Rank) */
+    /* 7. 좌표 디자인 */
     .rank-label {
         display: flex; align-items: center; justify-content: center;
         height: 100%; font-weight: 900; font-size: 20px; color: #555;
+        padding-right: 15px; 
     }
-
-    /* 7. [핵심] 하단 알파벳 좌표 (File) - 왼쪽으로 이동 */
+    
     .file-label {
         display: flex; align-items: center; justify-content: center;
         width: 100%; height: 50px; 
         font-weight: 900; font-size: 20px; color: #555;
         margin-top: -5px;
-        
-        /* 여기를 조절하여 좌우 위치를 맞춥니다 (-값: 왼쪽, +값: 오른쪽) */
-        transform: translateX(-40px); 
+        transform: translateX(-10px); /* 알파벳 미세 조정 */
     }
 </style>
 """, unsafe_allow_html=True)
@@ -125,7 +127,7 @@ stockfish_path = shutil.which("stockfish")
 if not stockfish_path and os.path.exists("/usr/games/stockfish"):
     stockfish_path = "/usr/games/stockfish"
 
-# --- 로직 함수들 (이전과 동일) ---
+# --- 로직 함수들 ---
 def play_engine_move(skill_level):
     if not stockfish_path or st.session_state.board.is_game_over(): return
     try:
@@ -236,8 +238,7 @@ with main_col:
 
     # 1. 체스판
     for rank in ranks:
-        # gap="0"는 Streamlit이 지원하지 않으므로 CSS로 처리 (gap="small" 유지해도 CSS가 덮어씀)
-        cols = st.columns(col_ratios, gap="small") 
+        cols = st.columns(col_ratios, gap="small")
         cols[0].markdown(f"<div class='rank-label'>{rank + 1}</div>", unsafe_allow_html=True)
         
         for i, file in enumerate(files):
@@ -252,9 +253,8 @@ with main_col:
                 handle_click(sq)
                 st.rerun()
 
-    # 2. 하단 좌표
+    # 2. 하단 좌표 (CSS가 여기서도 작동하여 자동으로 정렬됩니다)
     footer = st.columns(col_ratios, gap="small")
-    # 높이 맞춤용 투명 버튼 (scale 적용)
     footer[0].markdown("""
         <div class="stButton" style="visibility:hidden; pointer-events:none;">
             <button style="font-size:45px !important; transform: scale(1.8); padding:0 !important; border:none !important;">X</button>
