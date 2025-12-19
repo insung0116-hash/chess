@@ -7,13 +7,13 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 체스말 대형화 & 좌표 위치 정밀 타격 ---
+# --- CSS: 좌표 칼각 정렬 & 체스말 초대형화 ---
 st.markdown("""
 <style>
     /* 1. 기본 배경 */
     .stApp { background-color: #f4f4f4; }
     
-    /* 2. 메인 화면(보드 영역) 간격 제거 */
+    /* 2. 메인 화면(보드 영역) 간격 완전 제거 */
     section[data-testid="stMain"] div[data-testid="stHorizontalBlock"] {
         gap: 0px !important;
     }
@@ -23,28 +23,26 @@ st.markdown("""
         min-width: 0px !important;
     }
     
-    /* 3. [핵심] 체스말 크기 대폭 확대 (칸 채우기) */
+    /* 3. [초대형] 체스말 스타일 */
     section[data-testid="stMain"] div.stButton > button {
         width: 100% !important;
         aspect-ratio: 1 / 1;
-        font-size: 55px !important;    /* 40px -> 55px로 확대 */
+        font-size: 60px !important;    /* 크기 대폭 확대 (55px -> 60px) */
         font-weight: 500 !important;
-        padding: 0px !important;       /* 패딩 제거로 공간 확보 */
+        padding: 0px !important;
         margin: 0px !important;
         border: none !important;
         border-radius: 0px !important;
-        line-height: 1 !important;     /* 줄 간격 최소화 */
+        line-height: 1 !important;
         box-shadow: none !important;
-        
-        /* 말 색상: 검은 잉크 */
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
         
-        /* 텍스트(말)를 버튼 정중앙에 배치 */
+        /* 중앙 정렬 보정 */
         display: flex;
         align-items: center;
         justify-content: center;
-        padding-bottom: 8px !important; /* 미세한 높이 보정 */
+        padding-bottom: 10px !important; /* 폰트 베이스라인 조정 */
     }
 
     /* 4. 체스판 색상 */
@@ -60,7 +58,7 @@ st.markdown("""
         z-index: 10;
     }
 
-    /* 5. 사이드바 버튼 복구 (정상 크기) */
+    /* 5. 사이드바 버튼 (정상 크기 유지) */
     section[data-testid="stSidebar"] div.stButton > button {
         width: 100%;
         height: auto;
@@ -71,8 +69,7 @@ st.markdown("""
         border-radius: 8px;
     }
 
-    /* 6. [좌표 수정] 위치 및 정렬 교정 */
-    /* 세로 숫자 (1~8) */
+    /* 6. [중요] 좌표 스타일 - 칼각 정렬 */
     .coord-rank {
         display: flex; 
         align-items: center; 
@@ -81,18 +78,17 @@ st.markdown("""
         font-weight: bold; 
         font-size: 16px; 
         color: #555; 
-        padding-right: 8px;
+        padding-right: 5px;
     }
     
-    /* 가로 알파벳 (A~H) */
     .coord-file {
         width: 100%;
-        text-align: center;            /* 가로축 정중앙 정렬 */
+        text-align: center;
         font-weight: bold; 
         font-size: 16px; 
         color: #555; 
-        margin-top: -5px !important;   /* 보드 쪽으로 바짝 당김 */
-        padding-top: 0px !important;
+        margin-top: -8px !important; /* 보드에 더 바짝 붙임 */
+        padding: 0px !important;
         display: block;
     }
     
@@ -225,7 +221,7 @@ with st.sidebar:
             
     if st.button("💡 힌트"): show_hint(); st.rerun()
 
-# --- 메인 화면 (체스판) ---
+# --- 메인 화면 ---
 main_col, info_col = st.columns([2, 1])
 
 with main_col:
@@ -235,13 +231,13 @@ with main_col:
     files = range(8) if is_white else range(7, -1, -1)
     file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-    # 비율 설정: 좌측 좌표(0.5) + 보드 8칸(1씩)
+    # 좌측 좌표(0.5) + 보드 8칸(1) 비율
     col_ratios = [0.5] + [1] * 8
 
     # 보드 루프
     for rank in ranks:
         cols = st.columns(col_ratios, gap="small")
-        # 좌측 숫자 좌표
+        # [좌측 숫자 좌표]
         cols[0].markdown(f"<div class='coord-rank'>{rank + 1}</div>", unsafe_allow_html=True)
         
         for i, file in enumerate(files):
@@ -256,11 +252,14 @@ with main_col:
                 handle_click(sq)
                 st.rerun()
 
-    # 하단 알파벳 좌표 (동일한 비율 사용)
+    # [하단 알파벳 좌표] - 여기가 중요!
     footer = st.columns(col_ratios, gap="small")
-    footer[0].write("") # 맨 앞칸(숫자 좌표 아래)은 공백
+    
+    # 1. 맨 앞칸에 '투명한 숫자'를 넣어 윗줄과 너비를 100% 동일하게 맞춤 (정렬 비결)
+    footer[0].markdown("<div class='coord-rank' style='visibility:hidden;'>1</div>", unsafe_allow_html=True)
+    
+    # 2. 알파벳 좌표 배치
     for i, label in enumerate(file_labels):
-        # margin-top: -5px 와 text-align: center가 적용된 클래스 사용
         footer[i+1].markdown(f"<div class='coord-file'>{label}</div>", unsafe_allow_html=True)
 
 with info_col:
