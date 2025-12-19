@@ -13,14 +13,23 @@ st.markdown("""
     /* 1. 배경 설정 */
     .stApp { background-color: #f4f4f4; }
     
-    /* 2. [핵심] 컬럼 간격 강제 제거 (보드 붙이기) */
+    /* 2-1. [핵심] 가로 블록(열 컨테이너)의 간격 강제 제거 */
     div[data-testid="stHorizontalBlock"] {
         gap: 0px !important;
+        padding: 0px !important;
     }
+
+    /* 2-2. [핵심] 개별 열(Column)의 여백 제거 및 꽉 채우기 */
     div[data-testid="column"] {
         padding: 0px !important;
         margin: 0px !important;
-        min-width: 0px !important; /* 컬럼 최소 너비 해제 */
+        flex: 1 1 auto !important; /* 비율대로 꽉 채움 */
+        min-width: 0px !important;
+    }
+    
+    /* 2-3. 열 내부의 '위젯 컨테이너' 간격 제거 (이중 안전장치) */
+    div[data-testid="column"] > div {
+        gap: 0px !important; 
     }
     
     /* 3. 체스말 버튼 (이전과 동일: 1.8배 확대) */
