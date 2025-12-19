@@ -7,13 +7,13 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 체스판 스타일 & 말 색상 구분(핵심) ---
+# --- CSS: 말 크기 대폭 확대 및 정렬 ---
 st.markdown("""
 <style>
-    /* 1. 배경 설정 */
+    /* 1. 배경 및 기본 설정 */
     .stApp { background-color: #f4f4f4; }
     
-    /* 2. 메인 화면의 컬럼 간격/여백 제거 (칼각 정렬) */
+    /* 2. 메인 보드 레이아웃 강제 정렬 (틈새 제거) */
     section[data-testid="stMain"] div[data-testid="stHorizontalBlock"] {
         gap: 0px !important;
     }
@@ -23,71 +23,73 @@ st.markdown("""
         min-width: 0px !important;
     }
     
-    /* 3. [핵심] 체스말 디자인 (흑백 구분 명확화) */
+    /* 3. [핵심] 체스말 버튼 스타일 (초대형 사이즈) */
     section[data-testid="stMain"] div.stButton > button {
         width: 100% !important;
         aspect-ratio: 1 / 1;
         
-        /* 폰트 설정 */
-        font-size: 55px !important;  /* 말 크기 적절히 조절 */
+        /* 폰트 크기: 75px (칸을 거의 꽉 채움) */
+        font-size: 75px !important; 
+        
+        /* 유니코드 폰트 강제 지정 (깨짐 방지 및 볼륨감) */
         font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif !important;
-        font-weight: 600 !important;
         
-        /* [중요] 색상 구분 로직 */
-        color: #000000 !important;   /* 기본 잉크는 검정 */
-        
-        /* [마법의 CSS] 흰색 외곽선을 두껍게 주어 흑/백을 분리하고 가독성을 높임 */
-        text-shadow: 
-            2px 0 #fff, -2px 0 #fff, 0 2px #fff, 0 -2px #fff,
-            1px 1px #fff, -1px -1px #fff, 1px -1px #fff, -1px 1px #fff !important;
-            
-        /* 버튼 기본 스타일 제거 */
+        /* 버튼 내부 여백 제거 */
         padding: 0px !important;
         margin: 0px !important;
         border: none !important;
         border-radius: 0px !important;
-        line-height: 1 !important;
-        box-shadow: none !important;
-        background-color: transparent;
         
-        /* 중앙 정렬 */
+        /* [중요] 수직 정렬 보정 */
+        /* 글자가 너무 커서 버튼 밖으로 나가는 것을 방지하고 중앙에 위치시킴 */
+        line-height: 1 !important; 
         display: flex;
         align-items: center;
         justify-content: center;
-        padding-bottom: 8px !important;
+        padding-bottom: 12px !important; /* 바닥에서 살짝 띄움 */
+        
+        /* 색상 및 테두리 효과 (흑/백 구분) */
+        color: #000000 !important;
+        text-shadow: 
+            2px 0 #fff, -2px 0 #fff, 0 2px #fff, 0 -2px #fff,
+            2px 2px #fff, -2px -2px #fff, 2px -2px #fff, -2px 2px #fff !important;
+            
+        background-color: transparent;
+        transition: transform 0.1s; /* 클릭 시 살짝 눌리는 느낌 */
     }
 
-    /* 4. 체스판 바닥 색상 (갈색/베이지) */
+    /* 4. 체스판 바닥 색상 */
     section[data-testid="stMain"] div.stButton > button[kind="primary"] {
-        background-color: #D18B47 !important; /* 진한 갈색 */
+        background-color: #D18B47 !important; /* 갈색 */
     }
     section[data-testid="stMain"] div.stButton > button[kind="secondary"] {
-        background-color: #FFCE9E !important; /* 밝은 베이지 */
+        background-color: #FFCE9E !important; /* 베이지 */
     }
     
-    /* 선택/포커스 효과 */
+    /* 포커스(클릭 대기) 효과 */
     section[data-testid="stMain"] div.stButton > button:focus {
         background-color: #f7e034 !important;
-        box-shadow: inset 0 0 0 4px #c7c734 !important;
+        transform: scale(0.95); /* 누르면 살짝 작아짐 */
         z-index: 10;
     }
 
-    /* 5. 사이드바 버튼 (정상 크기 복구) */
+    /* 5. 사이드바 버튼 복구 (영향 안 받게) */
     section[data-testid="stSidebar"] div.stButton > button {
         width: 100%; height: auto; aspect-ratio: auto;
         font-size: 16px !important; text-shadow: none !important;
         padding: 0.5rem 1rem; margin-bottom: 10px; border-radius: 8px;
+        padding-bottom: 0.5rem !important; /* 위의 padding-bottom 덮어쓰기 */
     }
 
-    /* 6. 좌표 스타일 */
+    /* 6. 좌표 폰트 */
     .rank-label {
         display: flex; align-items: center; justify-content: center;
-        height: 100%; font-weight: 900; font-size: 18px; color: #555;
+        height: 100%; font-weight: 900; font-size: 20px; color: #555;
     }
     .file-label {
         display: flex; align-items: center; justify-content: center;
         width: 100%; height: 50px; 
-        font-weight: 900; font-size: 18px; color: #555;
+        font-weight: 900; font-size: 20px; color: #555;
         margin-top: -5px;
     }
 </style>
@@ -106,6 +108,7 @@ stockfish_path = shutil.which("stockfish")
 if not stockfish_path and os.path.exists("/usr/games/stockfish"):
     stockfish_path = "/usr/games/stockfish"
 
+# --- 게임 로직 ---
 def play_engine_move(skill_level):
     if not stockfish_path or st.session_state.board.is_game_over(): return
     try:
@@ -188,6 +191,7 @@ with st.sidebar:
     color_opt = st.radio("진영 선택", ["White (선공)", "Black (후공)"])
     new_color = chess.WHITE if "White" in color_opt else chess.BLACK
     skill = st.slider("AI 레벨", 0, 20, 3)
+    
     if st.button("🔄 게임 재시작", type="primary"):
         st.session_state.board = chess.Board()
         st.session_state.selected_square = None
@@ -195,6 +199,7 @@ with st.sidebar:
         st.session_state.redo_stack = []
         st.session_state.analysis_data = None
         st.rerun()
+    
     st.divider()
     c1, c2 = st.columns(2)
     with c1: 
@@ -212,8 +217,7 @@ with main_col:
     files = range(8) if is_white else range(7, -1, -1)
     file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-    # 비율 설정 (좌표 : 체스판)
-    col_ratios = [0.8] + [2] * 8
+    col_ratios = [0.7] + [2] * 8
 
     # 1. 체스판 그리기
     for rank in ranks:
@@ -224,26 +228,21 @@ with main_col:
         for i, file in enumerate(files):
             sq = chess.square(file, rank)
             piece = st.session_state.board.piece_at(sq)
-            
-            # [중요] 말 기호 처리
-            # 유니코드는 기본적으로 White(♔:속이 빔), Black(♚:속이 참)으로 구분되어 있습니다.
-            # CSS에서 흰색 테두리(text-shadow)를 주었으므로:
-            # - White말: 검은 외곽선 + 흰색 그림자 -> 하얗게 보임
-            # - Black말: 검은 채움 + 흰색 그림자 -> 검게 보임
             symbol = piece.unicode_symbol() if piece else "⠀"
             
             is_dark = (rank + file) % 2 == 0
             btn_type = "primary" if is_dark else "secondary"
             
+            # 버튼 클릭
             if cols[i+1].button(symbol, key=f"sq_{sq}", type=btn_type):
                 handle_click(sq)
                 st.rerun()
 
-    # 2. 하단 좌표 (너비 맞춤용 투명 버튼 사용)
+    # 2. 하단 좌표 (너비 맞춤용 투명 버튼)
     footer = st.columns(col_ratios, gap="small")
     footer[0].markdown("""
         <div class="stButton" style="visibility:hidden; pointer-events:none;">
-            <button style="font-size:55px !important; padding:0 !important; border:none !important;">X</button>
+            <button style="font-size:75px !important; padding:0 !important; border:none !important;">X</button>
         </div>
         """, unsafe_allow_html=True)
     
