@@ -5,82 +5,84 @@ import shutil
 import os
 
 # --- 페이지 설정 ---
-st.set_page_config(page_title="Master Chess Board", page_icon="♟️", layout="wide")
+st.set_page_config(page_title="Ultimate Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 디자인의 핵심 (여백 제거 + 바둑판 무늬) ---
+# --- CSS: 격자 틈새 완벽 제거 (가장 중요) ---
 st.markdown("""
 <style>
-    /* 전체 배경 */
-    .stApp { background-color: #f0f2f6; }
+    /* 1. 기본 배경 및 레이아웃 보정 */
+    .stApp { background-color: #eef0f3; }
     
-    /* [중요] 컬럼 사이의 흰색 틈(Gap) 강제 삭제 */
+    /* 2. 컬럼 간격(Gap) 강제 삭제 */
+    /* Streamlit의 수평 배치 컨테이너를 찾아서 간격을 0으로 만듭니다. */
     div[data-testid="stHorizontalBlock"] {
         gap: 0px !important;
+        margin: 0px !important;
+        padding: 0px !important;
     }
     
-    /* 컬럼 내부 여백 삭제 */
+    /* 3. 각 컬럼(칸) 내부 여백 삭제 */
     div[data-testid="column"] {
         padding: 0px !important;
         margin: 0px !important;
-        min-width: 0px !important;
-        flex: 1 1 auto !important; /* 비율 강제 조정 */
+        min-width: 10px !important; /* 최소 너비 제한 해제 */
     }
-
-    /* 버튼 스타일 (정사각형) */
+    
+    /* 4. 버튼(체스말) 스타일: 꽉 채우기 */
     div.stButton > button {
         width: 100% !important;
-        aspect-ratio: 1 / 1;
-        font-size: 40px !important;
+        aspect-ratio: 1 / 1;           /* 정사각형 비율 고정 */
+        font-size: 38px !important;    /* 말 크기 적절히 조절 */
         padding: 0px !important;
         margin: 0px !important;
         border: none !important;
-        border-radius: 0px !important;
+        border-radius: 0px !important; /* 직각 */
         line-height: 1 !important;
+        box-shadow: none !important;   /* 그림자 제거 */
     }
 
-    /* 체스판 색상 (클래식 우드 테마로 복귀 - 눈이 가장 편함) */
-    /* 어두운 칸 (Primary) -> 갈색 */
+    /* 5. 체스판 색상 테마 (가장 깔끔한 클래식 우드) */
+    /* 어두운 칸 (갈색) */
     div.stButton > button[kind="primary"] {
-        background-color: #b58863 !important;
+        background-color: #B58863 !important;
         color: white !important;
     }
-    /* 밝은 칸 (Secondary) -> 베이지색 */
+    /* 밝은 칸 (베이지) */
     div.stButton > button[kind="secondary"] {
-        background-color: #f0d9b5 !important;
+        background-color: #F0D9B5 !important;
         color: black !important;
     }
 
-    /* 선택/포커스 효과 */
+    /* 6. 선택된 칸 강조 (노란색 테두리 대신 배경색 변경) */
     div.stButton > button:focus {
-        background-color: #f7e034 !important; /* 노란색 강조 */
+        background-color: #F6F669 !important;
         color: black !important;
+        box-shadow: inset 0 0 0 4px #c7c734 !important; /* 안쪽 테두리 효과 */
         z-index: 10;
-        box-shadow: inset 0 0 0 3px #e6bf00 !important; /* 테두리 대신 내부 그림자로 깨짐 방지 */
     }
 
-    /* 좌표 스타일 */
+    /* 7. 좌표 폰트 스타일 */
     .coord-rank {
         display: flex;
         align-items: center;
         justify-content: center;
         height: 100%;
-        font-weight: bold;
+        font-weight: 800;
         font-size: 16px;
         color: #555;
     }
     .coord-file {
         display: flex;
         justify-content: center;
-        padding-top: 5px;
-        font-weight: bold;
+        padding-top: 4px;
+        font-weight: 800;
         font-size: 16px;
         color: #555;
     }
     
-    /* 모바일 글자 크기 조정 */
-    @media (max-width: 600px) {
-        div.stButton > button { font-size: 24px !important; }
-    }
+    /* iframe 등 숨김 처리 */
+    iframe { display: none; }
+    
 </style>
 """, unsafe_allow_html=True)
 
@@ -97,15 +99,15 @@ if 'hint_move' not in st.session_state:
     st.session_state.hint_move = None
 if 'analysis_data' not in st.session_state:
     st.session_state.analysis_data = None
-if 'redo_stack' not in st.session_state: # [복구] 다시 실행 스택
+if 'redo_stack' not in st.session_state:
     st.session_state.redo_stack = []
 
-# --- Stockfish 경로 ---
+# --- Stockfish 설정 ---
 stockfish_path = shutil.which("stockfish")
 if not stockfish_path and os.path.exists("/usr/games/stockfish"):
     stockfish_path = "/usr/games/stockfish"
 
-# --- 로직 함수들 ---
+# --- 기능 함수 ---
 def play_engine_move(skill_level):
     if not stockfish_path or st.session_state.board.is_game_over(): return
     try:
@@ -113,19 +115,19 @@ def play_engine_move(skill_level):
         engine.configure({"Skill Level": skill_level})
         result = engine.play(st.session_state.board, chess.engine.Limit(time=0.2 + (skill_level * 0.05)))
         st.session_state.board.push(result.move)
-        st.session_state.redo_stack = [] # 새 수가 두어지면 redo 기록 삭제
+        st.session_state.redo_stack = [] # 새 수 두면 redo 기록 삭제
         st.session_state.hint_move = None
         engine.quit()
-        st.session_state.msg = "당신의 차례입니다!"
+        st.session_state.msg = "당신의 차례입니다."
     except: pass
 
 def show_hint():
     if not stockfish_path: return
-    with st.spinner("힌트 계산 중..."):
+    with st.spinner("수 읽는 중..."):
         engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
         res = engine.play(st.session_state.board, chess.engine.Limit(time=1.0))
         st.session_state.hint_move = res.move
-        st.session_state.msg = f"추천 수: {st.session_state.board.san(res.move)}"
+        st.session_state.msg = f"추천: {st.session_state.board.san(res.move)}"
         engine.quit()
 
 def handle_click(sq):
@@ -140,41 +142,43 @@ def handle_click(sq):
     else:
         if st.session_state.selected_square == sq:
             st.session_state.selected_square = None
-            st.session_state.msg = "취소됨"
+            st.session_state.msg = "선택 취소"
         else:
             m = chess.Move(st.session_state.selected_square, sq)
+            # 폰 승급 (자동 퀸)
             if st.session_state.board.piece_at(st.session_state.selected_square).piece_type == chess.PAWN and chess.square_rank(sq) in [0, 7]:
                 m.promotion = chess.QUEEN
+            
             if m in st.session_state.board.legal_moves:
                 st.session_state.board.push(m)
                 st.session_state.selected_square = None
-                st.session_state.redo_stack = [] # 새 행동 시 Redo 불가
-                st.session_state.msg = "이동 완료!"
+                st.session_state.redo_stack = [] # 가지치기 (새 역사 시작)
+                st.session_state.msg = "착수 완료"
             else:
                 p = st.session_state.board.piece_at(sq)
                 if p and p.color == st.session_state.board.turn:
                     st.session_state.selected_square = sq
                     st.session_state.msg = "선택 변경"
                 else:
-                    st.session_state.msg = "이동 불가"
+                    st.session_state.msg = "둘 수 없는 곳입니다."
 
 def undo_move():
     if len(st.session_state.board.move_stack) >= 2:
-        m1 = st.session_state.board.pop()
-        m2 = st.session_state.board.pop()
+        m1 = st.session_state.board.pop() # 상대 수
+        m2 = st.session_state.board.pop() # 내 수
         st.session_state.redo_stack.append(m2)
         st.session_state.redo_stack.append(m1)
         st.session_state.msg = "무르기 완료"
 
-def redo_move(): # [복구] 다시 실행 함수
+def redo_move():
     if len(st.session_state.redo_stack) >= 2:
         m1 = st.session_state.redo_stack.pop()
         m2 = st.session_state.redo_stack.pop()
         st.session_state.board.push(m1)
         st.session_state.board.push(m2)
-        st.session_state.msg = "다시 실행 완료"
+        st.session_state.msg = "다시 실행"
     else:
-        st.session_state.msg = "되돌릴 수가 없습니다."
+        st.session_state.msg = "되살릴 수가 없습니다."
 
 def analyze_game():
     if not stockfish_path or not st.session_state.board.move_stack: return
@@ -191,17 +195,21 @@ def analyze_game():
     st.session_state.analysis_data = scores
     prog.empty()
 
-# ================= UI 구성 =================
-st.title("♟️ Master Chess Board")
+# ================= UI 레이아웃 =================
+st.title("♟️ Ultimate Chess")
 
 # --- 사이드바 ---
 with st.sidebar:
-    st.header("설정")
-    color_opt = st.radio("내 진영", ["White (선공)", "Black (후공)"])
-    new_color = chess.WHITE if "White" in color_opt else chess.BLACK
-    skill = st.slider("AI 레벨", 0, 20, 5)
+    st.header("⚙️ 게임 설정")
     
-    if st.button("🔄 새 게임", type="primary", use_container_width=True):
+    # 진영 선택 시 초기화
+    new_color_label = st.radio("플레이어 선택", ["백 (White)", "흑 (Black)"])
+    new_color = chess.WHITE if "백" in new_color_label else chess.BLACK
+    
+    skill = st.slider("AI 난이도", 0, 20, 3)
+    
+    # 새 게임 버튼
+    if st.button("🔄 게임 초기화", type="primary", use_container_width=True):
         st.session_state.board = chess.Board()
         st.session_state.selected_square = None
         st.session_state.player_color = new_color
@@ -209,17 +217,17 @@ with st.sidebar:
         st.session_state.analysis_data = None
         st.session_state.hint_move = None
         st.rerun()
-    
+
     st.divider()
     
-    # [복구] 무르기 / 앞으로 가기 버튼 배치
+    # [복구된 기능] 무르기 / 앞으로 가기
     col_undo, col_redo = st.columns(2)
     with col_undo:
         if st.button("⬅️ 무르기"):
             undo_move()
             st.rerun()
     with col_redo:
-        if st.button("➡️ 되살리기"): # Redo 버튼
+        if st.button("➡️ 되살리기"):
             redo_move()
             st.rerun()
             
@@ -227,32 +235,37 @@ with st.sidebar:
         show_hint()
         st.rerun()
 
-# --- 메인 화면 레이아웃 ---
+# --- 메인 보드 ---
 main_col, info_col = st.columns([2, 1])
 
 with main_col:
+    # 흑/백 시점에 따른 렌더링 순서
     is_white = st.session_state.player_color == chess.WHITE
+    
+    # 백일 땐 7~0(위에서 아래로), 흑일 땐 0~7(위에서 아래로)
     ranks = range(7, -1, -1) if is_white else range(8)
     files = range(8) if is_white else range(7, -1, -1)
     file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-    # 비율: 좌표(0.7) + 8칸(1)
+    # 비율 설정: [좌표 0.7] + [보드 8칸]
     col_ratios = [0.7] + [1] * 8
 
-    # --- 보드 렌더링 ---
+    # --- 보드 그리기 루프 ---
     for rank in ranks:
-        # gap="0"을 넣어도 CSS가 우선 적용되지만, 명시적으로 넣음
+        # gap='small'이 기본값이지만 CSS로 0px 강제 적용됨
         cols = st.columns(col_ratios, gap="small")
         
-        # 좌측 좌표
+        # 1. 좌측 숫자 좌표
         cols[0].markdown(f"<div class='coord-rank'>{rank + 1}</div>", unsafe_allow_html=True)
         
+        # 2. 체스칸 배치
         for i, file in enumerate(files):
             sq = chess.square(file, rank)
             piece = st.session_state.board.piece_at(sq)
             symbol = piece.unicode_symbol() if piece else "⠀"
             
-            # 색상: (rank + file) % 2 == 0 이면 어두운 색
+            # 체스판 색상 로직: (Rank + File)이 짝수면 Dark, 홀수면 Light
+            # 플레이어 시점과 무관하게 고정된 좌표값 사용 -> 색상 엉킴 방지
             is_dark_square = (rank + file) % 2 == 0
             btn_type = "primary" if is_dark_square else "secondary"
             
@@ -260,9 +273,9 @@ with main_col:
                 handle_click(sq)
                 st.rerun()
 
-    # --- 하단 좌표 ---
+    # --- 하단 알파벳 좌표 ---
     footer = st.columns(col_ratios, gap="small")
-    footer[0].write("")
+    footer[0].write("") # 맨 앞칸 비우기
     for i, label in enumerate(file_labels):
         footer[i+1].markdown(f"<div class='coord-file'>{label}</div>", unsafe_allow_html=True)
 
@@ -272,14 +285,14 @@ with info_col:
     if st.session_state.board.is_check(): st.error("🔥 체크!")
     if st.session_state.board.is_game_over():
         st.success(f"게임 종료: {st.session_state.board.result()}")
-        if st.button("📊 게임 분석", use_container_width=True):
+        if st.button("📊 분석 그래프 보기", use_container_width=True):
             analyze_game(); st.rerun()
 
     if st.session_state.analysis_data:
         st.line_chart(st.session_state.analysis_data)
-        st.caption("그래프: 위(백 유리) / 아래(흑 유리)")
+        st.caption("그래프가 위면 백 유리, 아래면 흑 유리")
 
-# AI 턴 실행
+# AI 턴 자동 실행
 if not st.session_state.board.is_game_over() and st.session_state.board.turn != st.session_state.player_color:
     play_engine_move(skill)
     st.rerun()
