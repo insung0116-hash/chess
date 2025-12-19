@@ -5,67 +5,78 @@ import shutil
 import os
 
 # --- 페이지 설정 ---
-st.set_page_config(page_title="Ultimate Chess Pro", page_icon="♟️", layout="wide")
+st.set_page_config(page_title="Real Chess Board", page_icon="♟️", layout="wide")
 
-# --- 스타일(CSS) 커스텀 ---
+# --- CSS: 체스판 디자인의 핵심 ---
 st.markdown("""
 <style>
+    /* 전체 배경 */
     .stApp { background-color: #f0f2f6; }
     
-    /* 1. 버튼(체스칸) 스타일: 꽉 찬 느낌 */
-    div.stButton > button {
-        width: 60px !important;
-        height: 60px !important;
-        font-size: 52px !important;  /* 말 크기 대폭 확대 */
-        padding: 0px !important;
-        padding-bottom: 8px !important; /* 시각적 중심 보정 */
-        margin: 0px !important;
-        border-radius: 0px !important; /* 완전 사각형 */
-        border: none !important;
-        line-height: 1 !important;
-        background-color: transparent !important;
-    }
-    
-    /* 버튼 클릭 시/포커스 시 */
-    div.stButton > button:focus {
-        border: 4px solid #e6bf00 !important;
-        color: black !important;
-        z-index: 99;
-        transform: scale(1.02);
-    }
-
-    /* 2. 좌표 텍스트 스타일 */
-    .coord-text {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 60px;
-        font-size: 18px;
-        font-weight: bold;
-        color: #333;
-    }
-    
-    .coord-header {
-        text-align: center;
-        font-weight: bold;
-        font-size: 18px;
-        margin-bottom: 5px;
-    }
-
-    /* 3. 컬럼 간격 완전 제거 (CSS로 강제 적용) */
+    /* 1. 수평/수직 간격 강제 제거 (제일 중요) */
     [data-testid="column"] {
         padding: 0 !important;
-        gap: 0 !important;
+        margin: 0 !important;
         min-width: 0 !important;
     }
-    
-    /* 모바일 대응 */
-    @media (max-width: 700px) {
-        div.stButton > button {
-            width: 40px !important; height: 40px !important; font-size: 32px !important;
-        }
-        .coord-text { height: 40px; font-size: 14px; }
+    [data-testid="stHorizontalBlock"] {
+        gap: 0 !important; /* 버튼 사이 틈 없애기 */
     }
+
+    /* 2. 체스판 버튼 공통 스타일 */
+    div.stButton > button {
+        width: 100% !important;        /* 컬럼 너비 꽉 채우기 */
+        aspect-ratio: 1 / 1;           /* 정사각형 비율 유지 */
+        font-size: 40px !important;    /* 말 크기 */
+        padding: 0px !important;
+        margin: 0px !important;
+        border-radius: 0px !important; /* 모서리 각지게 */
+        border: none !important;
+        line-height: 1 !important;
+        box-shadow: none !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* 3. 체크무늬 색상 구현 (Primary/Secondary 속성 활용) */
+    /* 밝은 칸 (Secondary Type) -> 베이지색 */
+    div.stButton > button[kind="secondary"] {
+        background-color: #f0d9b5 !important;
+        color: black !important;
+    }
+    /* 어두운 칸 (Primary Type) -> 갈색 */
+    div.stButton > button[kind="primary"] {
+        background-color: #b58863 !important;
+        color: black !important;
+    }
+
+    /* 4. 선택된 말 / 포커스 효과 (노란색) */
+    div.stButton > button:focus {
+        background-color: #f7e034 !important;
+        border: 2px solid #e6bf00 !important;
+        z-index: 10; /* 다른 칸보다 위에 뜨게 */
+        transform: scale(1.05); /* 살짝 커짐 */
+    }
+
+    /* 5. 좌표 스타일 */
+    .coord-rank {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%; /* 버튼 높이와 맞춤 */
+        font-weight: bold;
+        font-size: 16px;
+        color: #555;
+    }
+    .coord-file {
+        text-align: center;
+        font-weight: bold;
+        font-size: 16px;
+        color: #555;
+        padding-top: 5px;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -75,7 +86,7 @@ if 'board' not in st.session_state:
 if 'selected_square' not in st.session_state:
     st.session_state.selected_square = None
 if 'msg' not in st.session_state:
-    st.session_state.msg = "환영합니다! 게임을 시작하세요."
+    st.session_state.msg = "게임을 시작합니다!"
 if 'player_color' not in st.session_state:
     st.session_state.player_color = chess.WHITE
 if 'hint_move' not in st.session_state:
@@ -116,6 +127,15 @@ def analyze_game():
     st.session_state.analysis_data = scores
     prog.empty()
 
+def show_hint():
+    if not stockfish_path: return
+    with st.spinner("계산 중..."):
+        engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
+        res = engine.play(st.session_state.board, chess.engine.Limit(time=1.0))
+        st.session_state.hint_move = res.move
+        st.session_state.msg = f"추천: {st.session_state.board.san(res.move)}"
+        engine.quit()
+
 def handle_click(sq):
     if st.session_state.board.turn != st.session_state.player_color: return
     
@@ -145,17 +165,8 @@ def handle_click(sq):
                 else:
                     st.session_state.msg = "이동 불가"
 
-def show_hint():
-    if not stockfish_path: return
-    with st.spinner("생각 중..."):
-        engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
-        res = engine.play(st.session_state.board, chess.engine.Limit(time=1.0))
-        st.session_state.hint_move = res.move
-        st.session_state.msg = f"추천: {st.session_state.board.san(res.move)}"
-        engine.quit()
-
 # ================= UI 구성 =================
-st.title("♟️ Ultimate Chess Pro")
+st.title("♟️ Real Chess Board")
 
 # --- 사이드바 ---
 with st.sidebar:
@@ -173,65 +184,73 @@ with st.sidebar:
         st.rerun()
     
     st.divider()
-    if st.button("💡 힌트"): show_hint(); st.rerun()
-    if st.button("⬅️ 무르기"):
-        if len(st.session_state.board.move_stack) >= 2:
-            st.session_state.board.pop(); st.session_state.board.pop(); st.rerun()
+    c1, c2 = st.columns(2)
+    with c1: 
+        if st.button("⬅️ 무르기"):
+            if len(st.session_state.board.move_stack) >= 2:
+                st.session_state.board.pop(); st.session_state.board.pop(); st.rerun()
+    with c2:
+        if st.button("💡 힌트"): show_hint(); st.rerun()
 
-# --- 메인 보드 렌더링 ---
-col_board, col_right = st.columns([2, 1])
+# --- 메인 화면 레이아웃 ---
+# 보드(2) : 정보창(1) 비율
+main_col, info_col = st.columns([2, 1])
 
-with col_board:
+with main_col:
+    # 흑/백 시점에 따라 랭크/파일 순서 결정
     is_white = st.session_state.player_color == chess.WHITE
     ranks = range(7, -1, -1) if is_white else range(8)
     files = range(8) if is_white else range(7, -1, -1)
-    file_labels = ['a','b','c','d','e','f','g','h'] if is_white else ['h','g','f','e','d','c','b','a']
+    file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-    # 1. 상단 좌표
-    header_cols = st.columns([0.6] + [1]*8 + [0.6], gap="small")
-    for i, label in enumerate(file_labels):
-        header_cols[i+1].markdown(f"<div class='coord-header'>{label.upper()}</div>", unsafe_allow_html=True)
-
-    # 2. 보드 본문
+    # --- 체스판 렌더링 루프 ---
     for rank in ranks:
-        # 여기가 문제였던 부분입니다. gap="0" -> gap="small"로 수정했습니다.
-        # CSS가 강제로 간격을 없애주므로 디자인은 완벽합니다.
-        row_cols = st.columns([0.6] + [1]*8 + [0.6], gap="small")
+        # 좌측 좌표(0.5) + 8칸(1씩) 의 비율
+        cols = st.columns([0.5] + [1]*8, gap="small")
         
-        # 좌측 좌표
-        rank_label = str(rank + 1)
-        row_cols[0].markdown(f"<div class='coord-text'>{rank_label}</div>", unsafe_allow_html=True)
+        # 1. 좌측 좌표 (1~8)
+        cols[0].markdown(f"<div class='coord-rank'>{rank + 1}</div>", unsafe_allow_html=True)
         
+        # 2. 체스칸 (8개)
         for i, file in enumerate(files):
             sq = chess.square(file, rank)
             piece = st.session_state.board.piece_at(sq)
-            symbol = piece.unicode_symbol() if piece else "⠀"
+            symbol = piece.unicode_symbol() if piece else "⠀" # 빈 공간은 특수공백
             
-            if row_cols[i+1].button(symbol, key=f"btn_{sq}"):
+            # --- 색상 결정 로직 (중요) ---
+            # 체크무늬: (rank + file)이 홀수/짝수냐에 따라 색 결정
+            # Streamlit의 type="primary"를 '어두운 갈색칸'으로, "secondary"를 '밝은 베이지칸'으로 둔갑시킴
+            is_dark_square = (rank + file) % 2 == 0
+            btn_type = "primary" if is_dark_square else "secondary"
+            
+            # 선택된 칸이나 힌트 칸은 CSS focus가 처리하거나, 여기서 type을 바꿀 수도 있지만
+            # CSS :focus 효과가 가장 강력하므로 그대로 둡니다.
+
+            # 버튼 생성
+            if cols[i+1].button(symbol, key=f"sq_{sq}", type=btn_type):
                 handle_click(sq)
                 st.rerun()
 
-        # 우측 좌표
-        row_cols[-1].markdown(f"<div class='coord-text'>{rank_label}</div>", unsafe_allow_html=True)
-
-    # 3. 하단 좌표
-    footer_cols = st.columns([0.6] + [1]*8 + [0.6], gap="small")
+    # --- 하단 좌표 (A~H) ---
+    # 위와 동일한 비율로 컬럼을 만들고 좌표를 배치
+    footer = st.columns([0.5] + [1]*8, gap="small")
     for i, label in enumerate(file_labels):
-        footer_cols[i+1].markdown(f"<div class='coord-header'>{label.upper()}</div>", unsafe_allow_html=True)
+        footer[i+1].markdown(f"<div class='coord-file'>{label}</div>", unsafe_allow_html=True)
 
-
-with col_right:
+with info_col:
     st.info(st.session_state.msg)
     
     if st.session_state.board.is_check(): st.error("🔥 체크!")
     if st.session_state.board.is_game_over():
-        st.success(f"게임 종료! ({st.session_state.board.result()})")
-        if st.button("📊 분석하기"): analyze_game(); st.rerun()
+        st.success(f"결과: {st.session_state.board.result()}")
+        if st.button("📊 게임 분석", use_container_width=True):
+            analyze_game(); st.rerun()
 
     if st.session_state.analysis_data:
         st.line_chart(st.session_state.analysis_data)
-        st.caption("그래프 위쪽: 백 유리 / 아래쪽: 흑 유리")
+        st.caption("그래프: 위(백 유리) / 아래(흑 유리)")
 
+# AI 턴
 if not st.session_state.board.is_game_over() and st.session_state.board.turn != st.session_state.player_color:
     play_engine_move(skill)
     st.rerun()
