@@ -7,69 +7,57 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 폰트 크기 대신 'transform: scale'로 강제 확대 ---
+# --- CSS: 틈새 제거 및 좌표 미세 조정 ---
 st.markdown("""
 <style>
-    /* 1. 기본 배경 */
+    /* 1. 배경 설정 */
     .stApp { background-color: #f4f4f4; }
     
-    /* 2. 메인 보드 간격 제거 */
-    section[data-testid="stMain"] div[data-testid="stHorizontalBlock"] {
+    /* 2. [핵심] 컬럼 간격 강제 제거 (보드 붙이기) */
+    div[data-testid="stHorizontalBlock"] {
         gap: 0px !important;
     }
-    section[data-testid="stMain"] div[data-testid="column"] {
+    div[data-testid="column"] {
         padding: 0px !important;
         margin: 0px !important;
-        min-width: 0px !important;
+        min-width: 0px !important; /* 컬럼 최소 너비 해제 */
     }
     
-    /* 3. [핵심] 체스말 버튼 스타일 */
+    /* 3. 체스말 버튼 (이전과 동일: 1.8배 확대) */
     section[data-testid="stMain"] div.stButton > button {
         width: 100% !important;
         aspect-ratio: 1 / 1;
-        
-        /* [중요] 폰트 크기는 적당히 두고, scale로 뻥튀기 합니다 */
-        /* 이렇게 하면 폰트 렌더링 한계를 무시하고 무조건 커집니다 */
         font-size: 45px !important; 
-        transform: scale(1.8) !important;  /* <--- 1.8배 강제 확대 */
+        transform: scale(1.8) !important;
         transform-origin: center center !important;
         
-        /* 흑/백 구분 (흰색 테두리) */
         color: #000000 !important;
         text-shadow: 
             1.5px 0 #fff, -1.5px 0 #fff, 0 1.5px #fff, 0 -1.5px #fff,
             1px 1px #fff, -1px -1px #fff, 1px -1px #fff, -1px 1px #fff !important;
             
-        /* 레이아웃 잡기 */
         padding: 0px !important;
         margin: 0px !important;
         border: none !important;
         border-radius: 0px !important;
         line-height: 1 !important;
-        
-        /* 확대 시 잘림 방지 */
         overflow: visible !important;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        
-        /* 미세 위치 조정 (이모지 특성상 바닥에 깔리는 것 보정) */
         padding-bottom: 8px !important; 
     }
 
-    /* 4. 체스판 바닥 색상 */
+    /* 4. 체스판 색상 */
     section[data-testid="stMain"] div.stButton > button[kind="primary"] {
-        background-color: #D18B47 !important; /* 갈색 */
+        background-color: #D18B47 !important;
     }
     section[data-testid="stMain"] div.stButton > button[kind="secondary"] {
-        background-color: #FFCE9E !important; /* 베이지 */
+        background-color: #FFCE9E !important;
     }
     section[data-testid="stMain"] div.stButton > button:focus {
         background-color: #f7e034 !important;
-        z-index: 10; /* 커진 상태에서 눌렀을 때 위로 오게 */
+        z-index: 10;
     }
 
-    /* 5. 사이드바 복구 (여기는 확대 안 함) */
+    /* 5. 사이드바 버튼 (영향 받지 않도록 초기화) */
     section[data-testid="stSidebar"] div.stButton > button {
         width: 100%; height: auto; aspect-ratio: auto;
         font-size: 16px !important; transform: none !important;
@@ -77,16 +65,21 @@ st.markdown("""
         padding: 0.5rem 1rem; margin-bottom: 10px; border-radius: 8px;
     }
 
-    /* 6. 좌표 폰트 */
+    /* 6. 왼쪽 숫자 좌표 (Rank) */
     .rank-label {
         display: flex; align-items: center; justify-content: center;
         height: 100%; font-weight: 900; font-size: 20px; color: #555;
     }
+
+    /* 7. [핵심] 하단 알파벳 좌표 (File) - 왼쪽으로 이동 */
     .file-label {
         display: flex; align-items: center; justify-content: center;
         width: 100%; height: 50px; 
         font-weight: 900; font-size: 20px; color: #555;
         margin-top: -5px;
+        
+        /* 여기를 조절하여 좌우 위치를 맞춥니다 (-값: 왼쪽, +값: 오른쪽) */
+        transform: translateX(-12px); 
     }
 </style>
 """, unsafe_allow_html=True)
@@ -104,7 +97,7 @@ stockfish_path = shutil.which("stockfish")
 if not stockfish_path and os.path.exists("/usr/games/stockfish"):
     stockfish_path = "/usr/games/stockfish"
 
-# --- 로직 ---
+# --- 로직 함수들 (이전과 동일) ---
 def play_engine_move(skill_level):
     if not stockfish_path or st.session_state.board.is_game_over(): return
     try:
@@ -215,7 +208,8 @@ with main_col:
 
     # 1. 체스판
     for rank in ranks:
-        cols = st.columns(col_ratios, gap="small")
+        # gap="0"는 Streamlit이 지원하지 않으므로 CSS로 처리 (gap="small" 유지해도 CSS가 덮어씀)
+        cols = st.columns(col_ratios, gap="small") 
         cols[0].markdown(f"<div class='rank-label'>{rank + 1}</div>", unsafe_allow_html=True)
         
         for i, file in enumerate(files):
@@ -231,8 +225,8 @@ with main_col:
                 st.rerun()
 
     # 2. 하단 좌표
-    # [중요] 여기도 동일하게 scale이 적용된 투명 버튼을 넣어야 줄이 맞습니다.
     footer = st.columns(col_ratios, gap="small")
+    # 높이 맞춤용 투명 버튼 (scale 적용)
     footer[0].markdown("""
         <div class="stButton" style="visibility:hidden; pointer-events:none;">
             <button style="font-size:45px !important; transform: scale(1.8); padding:0 !important; border:none !important;">X</button>
