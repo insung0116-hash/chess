@@ -7,27 +7,27 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 좌표 칼각 정렬 & 체스말 초대형화 ---
+# --- CSS: 격자/좌표 정밀 제어 & 체스말 꽉 채우기 ---
 st.markdown("""
 <style>
-    /* 1. 기본 배경 */
+    /* 1. 배경 및 기본 설정 */
     .stApp { background-color: #f4f4f4; }
     
-    /* 2. 메인 화면(보드 영역) 간격 완전 제거 */
-    section[data-testid="stMain"] div[data-testid="stHorizontalBlock"] {
+    /* 2. 컬럼 간격(Gap) 강제 제거 */
+    div[data-testid="stHorizontalBlock"] {
         gap: 0px !important;
     }
-    section[data-testid="stMain"] div[data-testid="column"] {
+    div[data-testid="column"] {
         padding: 0px !important;
         margin: 0px !important;
         min-width: 0px !important;
     }
     
-    /* 3. [초대형] 체스말 스타일 */
+    /* 3. [초대형] 체스말 스타일 - 칸 꽉 채우기 */
     section[data-testid="stMain"] div.stButton > button {
         width: 100% !important;
         aspect-ratio: 1 / 1;
-        font-size: 60px !important;    /* 크기 대폭 확대 (55px -> 60px) */
+        font-size: 70px !important;    /* 70px: 칸을 가득 채우는 크기 */
         font-weight: 500 !important;
         padding: 0px !important;
         margin: 0px !important;
@@ -38,11 +38,11 @@ st.markdown("""
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
         
-        /* 중앙 정렬 보정 */
+        /* 텍스트 정중앙 배치 */
         display: flex;
         align-items: center;
         justify-content: center;
-        padding-bottom: 10px !important; /* 폰트 베이스라인 조정 */
+        padding-bottom: 12px !important; /* 시각적 중심 보정 */
     }
 
     /* 4. 체스판 색상 */
@@ -58,7 +58,7 @@ st.markdown("""
         z-index: 10;
     }
 
-    /* 5. 사이드바 버튼 (정상 크기 유지) */
+    /* 5. 사이드바 버튼 (정상 크기) */
     section[data-testid="stSidebar"] div.stButton > button {
         width: 100%;
         height: auto;
@@ -69,7 +69,8 @@ st.markdown("""
         border-radius: 8px;
     }
 
-    /* 6. [중요] 좌표 스타일 - 칼각 정렬 */
+    /* 6. [중요] 좌표 스타일 & 정렬 */
+    /* 세로 숫자 (1~8) */
     .coord-rank {
         display: flex; 
         align-items: center; 
@@ -81,13 +82,14 @@ st.markdown("""
         padding-right: 5px;
     }
     
+    /* 가로 알파벳 (A~H) */
     .coord-file {
         width: 100%;
         text-align: center;
         font-weight: bold; 
         font-size: 16px; 
         color: #555; 
-        margin-top: -8px !important; /* 보드에 더 바짝 붙임 */
+        margin-top: -10px !important; /* 보드에 바짝 붙임 */
         padding: 0px !important;
         display: block;
     }
@@ -221,25 +223,27 @@ with st.sidebar:
             
     if st.button("💡 힌트"): show_hint(); st.rerun()
 
-# --- 메인 화면 ---
+# --- 메인 화면 (체스판) ---
 main_col, info_col = st.columns([2, 1])
 
 with main_col:
-    # 체스판 그리기
+    # 체스판 변수
     is_white = st.session_state.player_color == chess.WHITE
     ranks = range(7, -1, -1) if is_white else range(8)
     files = range(8) if is_white else range(7, -1, -1)
     file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-    # 좌측 좌표(0.5) + 보드 8칸(1) 비율
+    # 비율 설정 (좌측 좌표 + 보드 8칸)
     col_ratios = [0.5] + [1] * 8
 
-    # 보드 루프
+    # 보드 그리기 Loop
     for rank in ranks:
-        cols = st.columns(col_ratios, gap="small")
-        # [좌측 숫자 좌표]
+        cols = st.columns(col_ratios, gap="small") # gap="small"이지만 CSS로 0px 강제 적용
+        
+        # [좌측 숫자]
         cols[0].markdown(f"<div class='coord-rank'>{rank + 1}</div>", unsafe_allow_html=True)
         
+        # [체스말 버튼]
         for i, file in enumerate(files):
             sq = chess.square(file, rank)
             piece = st.session_state.board.piece_at(sq)
@@ -252,13 +256,13 @@ with main_col:
                 handle_click(sq)
                 st.rerun()
 
-    # [하단 알파벳 좌표] - 여기가 중요!
+    # [하단 알파벳 좌표] - 강제 정렬의 핵심
     footer = st.columns(col_ratios, gap="small")
     
-    # 1. 맨 앞칸에 '투명한 숫자'를 넣어 윗줄과 너비를 100% 동일하게 맞춤 (정렬 비결)
-    footer[0].markdown("<div class='coord-rank' style='visibility:hidden;'>1</div>", unsafe_allow_html=True)
+    # 1. 오프셋 칸에 '투명한 숫자 1'을 넣어 위쪽과 너비를 100% 일치시킴
+    footer[0].markdown("<div class='coord-rank' style='opacity: 0;'>1</div>", unsafe_allow_html=True)
     
-    # 2. 알파벳 좌표 배치
+    # 2. 알파벳 좌표
     for i, label in enumerate(file_labels):
         footer[i+1].markdown(f"<div class='coord-file'>{label}</div>", unsafe_allow_html=True)
 
