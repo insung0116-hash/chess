@@ -7,45 +7,58 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 격자/좌표 정밀 제어 & 체스말 꽉 채우기 ---
+# --- CSS: 레이아웃 강제 고정 (Flexbox Override) ---
 st.markdown("""
 <style>
-    /* 1. 배경 및 기본 설정 */
+    /* 1. 기본 배경 */
     .stApp { background-color: #f4f4f4; }
     
-    /* 2. 컬럼 간격(Gap) 강제 제거 */
-    div[data-testid="stHorizontalBlock"] {
+    /* 2. 메인 화면의 모든 컬럼 간격(Gap) 제거 */
+    section[data-testid="stMain"] div[data-testid="stHorizontalBlock"] {
         gap: 0px !important;
     }
-    div[data-testid="column"] {
-        padding: 0px !important;
-        margin: 0px !important;
+    
+    /* 3. [핵심] 컬럼 너비 강제 조정 (Streamlit 비율 무시) 
+       - 메인 화면(stMain) 안에 있는 모든 가로줄(HorizontalBlock)의 컬럼을 타겟팅합니다.
+       - 첫 번째 컬럼(좌표 숫자)은 5%로 고정
+       - 나머지 컬럼(체스판/좌표 알파벳)은 남은 공간을 등분(flex: 1)
+    */
+    section[data-testid="stMain"] div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1) {
+        flex: 0 0 5% !important;
+        max-width: 5% !important;
+        min-width: 5% !important;
+    }
+    section[data-testid="stMain"] div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(n+2) {
+        flex: 1 1 auto !important;
         min-width: 0px !important;
     }
+
+    /* 4. 컬럼 내부 여백 제거 */
+    section[data-testid="stMain"] div[data-testid="column"] {
+        padding: 0px !important;
+        margin: 0px !important;
+    }
     
-    /* 3. [초대형] 체스말 스타일 - 칸 꽉 채우기 */
+    /* 5. [초대형] 체스말 버튼 스타일 */
     section[data-testid="stMain"] div.stButton > button {
         width: 100% !important;
-        aspect-ratio: 1 / 1;
-        font-size: 70px !important;    /* 70px: 칸을 가득 채우는 크기 */
-        font-weight: 500 !important;
-        padding: 0px !important;
+        aspect-ratio: 1 / 1;           /* 정사각형 유지 */
+        font-size: 65px !important;    /* 칸을 가득 채우는 크기 */
+        padding: 0px !important;       /* 패딩 0으로 설정해 공간 확보 */
         margin: 0px !important;
         border: none !important;
         border-radius: 0px !important;
-        line-height: 1 !important;
+        line-height: 1.1 !important;   /* 줄 간격 조정으로 수직 중앙 정렬 */
         box-shadow: none !important;
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
         
-        /* 텍스트 정중앙 배치 */
         display: flex;
         align-items: center;
         justify-content: center;
-        padding-bottom: 12px !important; /* 시각적 중심 보정 */
     }
 
-    /* 4. 체스판 색상 */
+    /* 6. 체스판 색상 */
     section[data-testid="stMain"] div.stButton > button[kind="primary"] {
         background-color: #D18B47 !important; 
     }
@@ -58,7 +71,7 @@ st.markdown("""
         z-index: 10;
     }
 
-    /* 5. 사이드바 버튼 (정상 크기) */
+    /* 7. 사이드바 버튼 (정상 크기 유지) */
     section[data-testid="stSidebar"] div.stButton > button {
         width: 100%;
         height: auto;
@@ -69,29 +82,15 @@ st.markdown("""
         border-radius: 8px;
     }
 
-    /* 6. [중요] 좌표 스타일 & 정렬 */
-    /* 세로 숫자 (1~8) */
+    /* 8. 좌표 텍스트 스타일 */
     .coord-rank {
-        display: flex; 
-        align-items: center; 
-        justify-content: center;
-        height: 100%; 
-        font-weight: bold; 
-        font-size: 16px; 
-        color: #555; 
-        padding-right: 5px;
+        display: flex; align-items: center; justify-content: center;
+        height: 100%; font-weight: 900; font-size: 20px; color: #333;
     }
-    
-    /* 가로 알파벳 (A~H) */
     .coord-file {
-        width: 100%;
-        text-align: center;
-        font-weight: bold; 
-        font-size: 16px; 
-        color: #555; 
-        margin-top: -10px !important; /* 보드에 바짝 붙임 */
-        padding: 0px !important;
-        display: block;
+        display: flex; justify-content: center; 
+        font-weight: 900; font-size: 20px; color: #333;
+        margin-top: 5px; /* 약간의 여백 */
     }
     
     iframe { display: none; }
@@ -227,23 +226,24 @@ with st.sidebar:
 main_col, info_col = st.columns([2, 1])
 
 with main_col:
-    # 체스판 변수
     is_white = st.session_state.player_color == chess.WHITE
     ranks = range(7, -1, -1) if is_white else range(8)
     files = range(8) if is_white else range(7, -1, -1)
     file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-    # 비율 설정 (좌측 좌표 + 보드 8칸)
-    col_ratios = [0.5] + [1] * 8
+    # 비율 설정 (더 이상 CSS에 의해 무시되지만, 구조를 잡기 위해 1로 통일)
+    # 9개 컬럼 (1개 좌표 + 8개 보드)
+    # CSS에서 "첫번째는 5%, 나머지는 균등분배"라고 선언했으므로 여기 숫자는 1로 통일해도 됨
+    col_ratios = [1] * 9 
 
-    # 보드 그리기 Loop
+    # 1. 체스판 루프
     for rank in ranks:
-        cols = st.columns(col_ratios, gap="small") # gap="small"이지만 CSS로 0px 강제 적용
+        cols = st.columns(col_ratios, gap="small")
         
-        # [좌측 숫자]
+        # 첫 번째 컬럼: 좌표 (CSS가 5% 너비로 강제함)
         cols[0].markdown(f"<div class='coord-rank'>{rank + 1}</div>", unsafe_allow_html=True)
         
-        # [체스말 버튼]
+        # 나머지 8개 컬럼: 체스말 (CSS가 나머지 공간 등분)
         for i, file in enumerate(files):
             sq = chess.square(file, rank)
             piece = st.session_state.board.piece_at(sq)
@@ -256,13 +256,14 @@ with main_col:
                 handle_click(sq)
                 st.rerun()
 
-    # [하단 알파벳 좌표] - 강제 정렬의 핵심
+    # 2. 하단 좌표 루프 (정확히 동일한 구조 사용)
     footer = st.columns(col_ratios, gap="small")
     
-    # 1. 오프셋 칸에 '투명한 숫자 1'을 넣어 위쪽과 너비를 100% 일치시킴
-    footer[0].markdown("<div class='coord-rank' style='opacity: 0;'>1</div>", unsafe_allow_html=True)
+    # 첫 번째 컬럼: 빈 공간이지만 위와 '똑같은 구조'를 가져야 함
+    # CSS가 5% 너비를 보장함
+    footer[0].write("") 
     
-    # 2. 알파벳 좌표
+    # 나머지 8개 컬럼: A~H 좌표
     for i, label in enumerate(file_labels):
         footer[i+1].markdown(f"<div class='coord-file'>{label}</div>", unsafe_allow_html=True)
 
