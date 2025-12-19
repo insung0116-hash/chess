@@ -2,136 +2,150 @@ import streamlit as st
 import chess
 import chess.engine
 import shutil
-import os
-from streamlit_chessboard import st_chess_board
 
 # --- 페이지 설정 ---
-st.set_page_config(page_title="Grandmaster Chess (Mouse)", page_icon="🖱️", layout="wide")
+st.set_page_config(page_title="Clickable Chess", page_icon="♟️", layout="wide")
 
-st.title("🖱️ 마우스로 두는 스톡피쉬 체스")
-st.markdown("이제 **마우스 드래그**나 **클릭**으로 말을 움직이세요! (키보드 ❌)")
+# --- 스타일(CSS) 커스텀: 버튼 간격 줄이기 ---
+st.markdown("""
+<style>
+    div[data-testid="column"] {
+        width: fit-content !important;
+        flex: 0 1 auto !important;
+    }
+    div.stButton > button {
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
+        padding: 0;
+        line-height: 1;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# --- 1. 게임 상태 초기화 ---
+# --- 세션 상태 초기화 ---
 if 'board' not in st.session_state:
     st.session_state.board = chess.Board()
 
-board = st.session_state.board
+if 'selected_square' not in st.session_state:
+    st.session_state.selected_square = None  # 선택된 말의 위치
 
-# --- 2. 스톡피쉬 엔진 경로 찾기 ---
+if 'msg' not in st.session_state:
+    st.session_state.msg = "흰색(White) 차례입니다. 옮길 말을 클릭하세요."
+
+# --- Stockfish 엔진 경로 ---
 stockfish_path = shutil.which("stockfish")
-if stockfish_path is None:
-    possible_paths = ["/usr/games/stockfish", "/usr/bin/stockfish", "/usr/local/bin/stockfish"]
-    for path in possible_paths:
-        if os.path.exists(path):
-            stockfish_path = path
-            break
 
-# --- 3. AI 함수 ---
-def get_engine_move(board, skill_level=1, time_limit=0.1):
-    if not stockfish_path: return None
-    try:
-        engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
-        engine.configure({"Skill Level": skill_level})
-        result = engine.play(board, chess.engine.Limit(time=time_limit))
-        engine.quit()
-        return result.move
-    except: return None
-
-# --- 4. 사이드바 ---
-with st.sidebar:
-    st.header("⚙️ 설정")
-    # 난이도 조절
-    difficulty = st.select_slider("AI 난이도", options=["입문(Lv0)", "초보(Lv3)", "중수(Lv7)", "고수(Lv12)", "신(Lv20)"], value="초보(Lv3)")
+# --- 함수: AI(Stockfish) 턴 ---
+def play_engine_move():
+    if not stockfish_path:
+        st.warning("Stockfish 엔진을 찾을 수 없습니다.")
+        return
     
-    if "Lv0" in difficulty: skill = 0
-    elif "Lv3" in difficulty: skill = 3
-    elif "Lv7" in difficulty: skill = 7
-    elif "Lv12" in difficulty: skill = 12
-    else: skill = 20
+    with st.spinner("컴퓨터가 생각 중..."):
+        try:
+            engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
+            result = engine.play(st.session_state.board, chess.engine.Limit(time=1.0))
+            st.session_state.board.push(result.move)
+            engine.quit()
+            st.session_state.msg = "당신의 차례입니다."
+        except Exception as e:
+            st.error(f"AI 오류: {e}")
 
-    st.markdown("---")
+# --- 함수: 클릭 이벤트 처리 ---
+def handle_click(square_index):
+    board = st.session_state.board
+    selected = st.session_state.selected_square
+
+    # 1. 말을 선택하지 않은 상태에서 클릭함
+    if selected is None:
+        piece = board.piece_at(square_index)
+        if piece and piece.color == board.turn:
+            st.session_state.selected_square = square_index
+            st.session_state.msg = f"선택됨: {chess.square_name(square_index)}. 어디로 이동할까요?"
+        else:
+            st.session_state.msg = "자신의 말을 선택해야 합니다."
     
-    # [새 게임] 버튼
-    if st.button("🔄 새 게임 (Reset)", use_container_width=True):
-        st.session_state.board = chess.Board()
-        st.rerun()
-
-    # [무르기] 버튼
-    if st.button("⬅️ 한 수 무르기"):
-        if len(board.move_stack) >= 2:
-            board.pop() # AI 수 취소
-            board.pop() # 내 수 취소
-            st.rerun()
-
-    st.markdown("---")
-    
-    # 상태 메시지
-    if stockfish_path:
-        st.success("✅ 엔진 가동 중")
+    # 2. 이미 말을 선택했고, 이동할 곳(두 번째 클릭)을 누름
     else:
-        st.error("⚠️ Stockfish 없음 (packages.txt 확인)")
+        # 같은 말을 다시 누르면 취소
+        if selected == square_index:
+            st.session_state.selected_square = None
+            st.session_state.msg = "선택을 취소했습니다."
+            return
 
-    # 이동 기록 표시
-    with st.expander("📜 이동 기록"):
-        move_log = []
-        temp_board = chess.Board()
-        for i, move in enumerate(board.move_stack):
-            san = temp_board.san(move)
-            temp_board.push(move)
-            if i % 2 == 0: move_log.append(f"{i//2+1}. {san}")
-            else: move_log[-1] += f" {san}"
-        st.text("\n".join(move_log))
+        # 이동 시도
+        move = chess.Move(from_square=selected, to_square=square_index)
+        
+        # 승진(Promotion) 처리 (일단 퀸으로 자동 승진)
+        if chess.square_rank(square_index) in [0, 7]:
+            piece = board.piece_at(selected)
+            if piece and piece.piece_type == chess.PAWN:
+                move = chess.Move(from_square=selected, to_square=square_index, promotion=chess.QUEEN)
 
-# --- 5. 메인 화면 (인터랙티브 체스판) ---
+        if move in board.legal_moves:
+            board.push(move)
+            st.session_state.selected_square = None # 선택 초기화
+            st.session_state.msg = "이동 완료! 컴퓨터 차례..."
+            
+            # AI 턴 즉시 실행 여부는 스트림릿 리런 구조상 여기서 처리
+            # 화면이 갱신된 후 AI가 두도록 하기 위해 일단 둡니다.
+        else:
+            # 다른 내 말을 클릭했으면 선택 변경
+            piece = board.piece_at(square_index)
+            if piece and piece.color == board.turn:
+                st.session_state.selected_square = square_index
+                st.session_state.msg = f"선택 변경: {chess.square_name(square_index)}"
+            else:
+                st.session_state.msg = "그곳으로 이동할 수 없습니다."
 
-col1, col2 = st.columns([3, 1])
+
+# --- UI 구성 ---
+st.title("🖱️ Click-to-Move Chess")
+
+col1, col2 = st.columns([2, 1])
 
 with col1:
-    # 🚨 여기가 핵심! 마우스 조작 가능한 체스판 렌더링
-    # 사용자가 수를 두면 move_data에 정보가 들어옵니다.
-    move_data = st_chess_board(
-        board=board, 
-        key="chess_board", 
-        orientation="white"  # 내가 백(White)
-    )
+    # 8x8 버튼 그리드 생성
+    # 체스판은 위(8랭크)에서 아래(1랭크)로 그려야 함
+    for rank in range(7, -1, -1):
+        cols = st.columns(8) # 한 줄에 8개 컬럼
+        for file in range(8):
+            square_index = chess.square(file, rank)
+            piece = st.session_state.board.piece_at(square_index)
+            
+            # 말 아이콘 가져오기 (없으면 공백)
+            piece_symbol = piece.unicode_symbol() if piece else " "
+            
+            # 버튼 배경색 (체스판 체크무늬 효과)
+            is_dark_square = (rank + file) % 2 == 0
+            
+            # 선택된 말 강조
+            if st.session_state.selected_square == square_index:
+                label = f"[{piece_symbol}]" # 선택됨 표시
+            else:
+                label = piece_symbol
 
-    # --- 사용자 입력 처리 ---
-    # 사용자가 마우스로 둬서 보드 상태가 변했는지 확인
-    if move_data:
-        # 라이브러리가 보내준 FEN(보드상태)과 내 내부 보드 상태가 다르면 -> 사용자가 둔 것
-        # 하지만 이 라이브러리는 움직임을 감지해서 처리하는 로직이 필요함
-        
-        # 가장 최근 움직임(UCI)을 가져옴 (예: 'e2e4')
-        if 'move' in move_data and move_data['move']:
-            uci_move = move_data['move']
-            try:
-                move = chess.Move.from_uci(uci_move)
-                
-                # 내 차례이고, 둔 수가 합법적인 수라면
-                if board.turn == chess.WHITE and move in board.legal_moves:
-                    board.push(move)  # 1. 사용자 수 반영
-                    
-                    # 2. 게임 안 끝났으면 AI 차례
-                    if not board.is_game_over():
-                        with st.spinner("AI 생각 중..."):
-                            ai_move = get_engine_move(board, skill_level=skill, time_limit=0.5)
-                            if ai_move:
-                                board.push(ai_move) # 3. AI 수 반영
-                    
-                    st.rerun() # 화면 갱신
-            except:
-                pass
+            # 버튼 그리기 (키 값 유일하게 설정)
+            if cols[file].button(label, key=f"sq_{square_index}"):
+                handle_click(square_index)
+                st.rerun()
 
 with col2:
-    st.markdown("### 🎮 조작 방법")
-    st.info("""
-    - **드래그 앤 드롭**: 말을 잡고 원하는 곳에 놓으세요.
-    - **클릭 앤 클릭**: 말을 클릭하고 이동할 곳을 클릭하세요.
-    - 더 이상 `e4` 같은 글자를 칠 필요가 없습니다!
-    """)
+    st.info(st.session_state.msg)
     
-    if board.is_checkmate():
-        winner = "AI" if board.turn == chess.WHITE else "당신"
-        st.error(f"👑 체크메이트! {winner} 승리!")
-    elif board.is_game_over():
-        st.warning(f"게임 종료: {board.result()}")
+    # 게임 상태 표시
+    if st.session_state.board.is_game_over():
+        st.error(f"게임 종료! 결과: {st.session_state.board.result()}")
+    
+    # 턴 확인 및 AI 실행 트리거
+    if not st.session_state.board.is_game_over() and st.session_state.board.turn == chess.BLACK:
+        play_engine_move()
+        st.rerun()
+
+    st.markdown("---")
+    if st.button("게임 재시작"):
+        st.session_state.board = chess.Board()
+        st.session_state.selected_square = None
+        st.session_state.msg = "새 게임 시작!"
+        st.rerun()
