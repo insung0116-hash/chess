@@ -16,29 +16,29 @@ st.markdown("""
     /* 2. [핵심] 열(Column)별 누적 이동 (등차수열 적용) */
     /* Streamlit의 gap이 누적되는 것을 상쇄하기 위해 뒤로 갈수록 더 많이 당깁니다 */
     
-    /* 2번째 열 (체스판 A열) -> -16px */
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(2) { margin-left: -16px !important; }
+    /* 2번째 열 (체스판 A열) -> -40px */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(2) { margin-left: -40px !important; }
     
-    /* 3번째 열 (체스판 B열) -> -32px */
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(3) { margin-left: -32px !important; }
+    /* 3번째 열 (체스판 B열) -> -80px */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(3) { margin-left: -80px !important; }
     
-    /* 4번째 열 -> -48px */
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(4) { margin-left: -48px !important; }
+    /* 4번째 열 -> -120px */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(4) { margin-left: -120px !important; }
     
-    /* 5번째 열 -> -64px */
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(5) { margin-left: -64px !important; }
+    /* 5번째 열 -> -160px */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(5) { margin-left: -160px !important; }
     
-    /* 6번째 열 -> -80px */
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(6) { margin-left: -80px !important; }
+    /* 6번째 열 -> -200px */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(6) { margin-left: -200px !important; }
     
-    /* 7번째 열 -> -96px */
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(7) { margin-left: -96px !important; }
+    /* 7번째 열 -> -240px */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(7) { margin-left: -240px !important; }
     
-    /* 8번째 열 -> -112px */
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(8) { margin-left: -112px !important; }
+    /* 8번째 열 -> -280px */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(8) { margin-left: -280px !important; }
     
-    /* 9번째 열 (체스판 H열) -> -128px */
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(9) { margin-left: -128px !important; }
+    /* 9번째 열 (체스판 H열) -> -320px */
+    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(9) { margin-left: -320px !important; }
 
     /* 3. 공통 레이아웃 정리 */
     div[data-testid="column"] {
