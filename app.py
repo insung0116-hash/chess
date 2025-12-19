@@ -6,7 +6,7 @@ import shutil
 import os
 
 # --- 페이지 설정 ---
-st.set_page_config(page_title="Big Chess Pro", page_icon="♟️", layout="wide")
+st.set_page_config(page_title="Chess Pro", page_icon="♟️", layout="wide")
 
 # --- 스타일(CSS) 대폭 수정: 크기 확대 ---
 st.markdown("""
