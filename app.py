@@ -51,13 +51,13 @@ st.markdown("""
         overflow: visible !important; /* 당겨진 요소가 잘리지 않도록 */
     }
 
-    /* 4. 체스말 버튼 (1.8배 확대) */
+    /* 4. 체스말 버튼 (2.5배 확대) */
     section[data-testid="stMain"] div.stButton > button {
         width: 100% !important;
         aspect-ratio: 1 / 1;
         
         font-size: 45px !important; 
-        transform: scale(2.0) !important;
+        transform: scale(2.5) !important;
         transform-origin: center center !important;
         
         color: #000000 !important;
