@@ -7,14 +7,13 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 체스판과 일반 버튼 스타일 분리 ---
+# --- CSS: 체스말 대형화 & 좌표 위치 정밀 타격 ---
 st.markdown("""
 <style>
     /* 1. 기본 배경 */
     .stApp { background-color: #f4f4f4; }
     
-    /* 2. [중요] '메인 화면(체스판)' 영역의 간격만 없애기 */
-    /* 사이드바에는 영향을 주지 않도록 stMain 내부만 타겟팅 */
+    /* 2. 메인 화면(보드 영역) 간격 제거 */
     section[data-testid="stMain"] div[data-testid="stHorizontalBlock"] {
         gap: 0px !important;
     }
@@ -24,28 +23,36 @@ st.markdown("""
         min-width: 0px !important;
     }
     
-    /* 3. [핵심 수정] 체스말 스타일은 '메인 화면'에 있는 버튼에만 적용 */
+    /* 3. [핵심] 체스말 크기 대폭 확대 (칸 채우기) */
     section[data-testid="stMain"] div.stButton > button {
         width: 100% !important;
-        aspect-ratio: 1 / 1;           /* 정사각형 유지 */
-        font-size: 40px !important;    /* 말 크기 (여기는 커야 함) */
+        aspect-ratio: 1 / 1;
+        font-size: 55px !important;    /* 40px -> 55px로 확대 */
         font-weight: 500 !important;
-        padding: 0px !important;
+        padding: 0px !important;       /* 패딩 제거로 공간 확보 */
         margin: 0px !important;
         border: none !important;
         border-radius: 0px !important;
-        line-height: 1 !important;
+        line-height: 1 !important;     /* 줄 간격 최소화 */
         box-shadow: none !important;
-        color: #000000 !important;     /* 잉크색 검정 */
+        
+        /* 말 색상: 검은 잉크 */
+        color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
+        
+        /* 텍스트(말)를 버튼 정중앙에 배치 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding-bottom: 8px !important; /* 미세한 높이 보정 */
     }
 
-    /* 4. 체스판 색상 (메인 화면 버튼만) */
+    /* 4. 체스판 색상 */
     section[data-testid="stMain"] div.stButton > button[kind="primary"] {
-        background-color: #D18B47 !important; /* 갈색 */
+        background-color: #D18B47 !important; 
     }
     section[data-testid="stMain"] div.stButton > button[kind="secondary"] {
-        background-color: #FFCE9E !important; /* 베이지 */
+        background-color: #FFCE9E !important; 
     }
     section[data-testid="stMain"] div.stButton > button:focus {
         background-color: #f7e034 !important;
@@ -53,25 +60,40 @@ st.markdown("""
         z-index: 10;
     }
 
-    /* 5. [사이드바 복구] 사이드바 버튼은 정상 크기로 되돌림 */
+    /* 5. 사이드바 버튼 복구 (정상 크기) */
     section[data-testid="stSidebar"] div.stButton > button {
         width: 100%;
         height: auto;
-        aspect-ratio: auto;        /* 정사각형 해제 */
-        font-size: 16px !important; /* 글자 크기 정상화 */
+        aspect-ratio: auto;
+        font-size: 16px !important;
         padding: 0.5rem 1rem;
         margin-bottom: 10px;
-        border-radius: 8px;        /* 둥근 모서리 복구 */
+        border-radius: 8px;
     }
 
-    /* 6. 좌표 스타일 (작고 깔끔하게 유지) */
+    /* 6. [좌표 수정] 위치 및 정렬 교정 */
+    /* 세로 숫자 (1~8) */
     .coord-rank {
-        display: flex; align-items: center; justify-content: center;
-        height: 100%; font-weight: bold; font-size: 14px; color: #666; padding-right: 5px;
+        display: flex; 
+        align-items: center; 
+        justify-content: center;
+        height: 100%; 
+        font-weight: bold; 
+        font-size: 16px; 
+        color: #555; 
+        padding-right: 8px;
     }
+    
+    /* 가로 알파벳 (A~H) */
     .coord-file {
-        display: flex; justify-content: center; align-items: flex-start;
-        font-weight: bold; font-size: 14px; color: #666; margin-top: 5px;
+        width: 100%;
+        text-align: center;            /* 가로축 정중앙 정렬 */
+        font-weight: bold; 
+        font-size: 16px; 
+        color: #555; 
+        margin-top: -5px !important;   /* 보드 쪽으로 바짝 당김 */
+        padding-top: 0px !important;
+        display: block;
     }
     
     iframe { display: none; }
@@ -186,7 +208,6 @@ with st.sidebar:
     new_color = chess.WHITE if "White" in color_opt else chess.BLACK
     skill = st.slider("AI 레벨", 0, 20, 3)
     
-    # 사이드바 버튼들은 이제 정상 크기로 나옵니다
     if st.button("🔄 게임 재시작", type="primary", use_container_width=True):
         st.session_state.board = chess.Board()
         st.session_state.selected_square = None
@@ -208,16 +229,19 @@ with st.sidebar:
 main_col, info_col = st.columns([2, 1])
 
 with main_col:
-    # 이 영역(main_col) 안의 버튼만 CSS로 커지게 설정됨
+    # 체스판 그리기
     is_white = st.session_state.player_color == chess.WHITE
     ranks = range(7, -1, -1) if is_white else range(8)
     files = range(8) if is_white else range(7, -1, -1)
     file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
+    # 비율 설정: 좌측 좌표(0.5) + 보드 8칸(1씩)
     col_ratios = [0.5] + [1] * 8
 
+    # 보드 루프
     for rank in ranks:
         cols = st.columns(col_ratios, gap="small")
+        # 좌측 숫자 좌표
         cols[0].markdown(f"<div class='coord-rank'>{rank + 1}</div>", unsafe_allow_html=True)
         
         for i, file in enumerate(files):
@@ -232,9 +256,11 @@ with main_col:
                 handle_click(sq)
                 st.rerun()
 
+    # 하단 알파벳 좌표 (동일한 비율 사용)
     footer = st.columns(col_ratios, gap="small")
-    footer[0].write("")
+    footer[0].write("") # 맨 앞칸(숫자 좌표 아래)은 공백
     for i, label in enumerate(file_labels):
+        # margin-top: -5px 와 text-align: center가 적용된 클래스 사용
         footer[i+1].markdown(f"<div class='coord-file'>{label}</div>", unsafe_allow_html=True)
 
 with info_col:
