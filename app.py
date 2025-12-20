@@ -49,10 +49,10 @@ st.markdown("""
         border: 0 !important;
     }
 
-   /* 6. [핵심] 버튼 본체 스타일 */
+    /* 6. [좌우 틈 제거 2단계] 버튼 과장 확대 */
     div.stButton > button {
-        width: 115% !important;        
-        margin-left: -7.5% !important; 
+        width: 115% !important;       /* 115%로 대폭 확대 */
+        margin-left: -7.5% !important; /* 중앙 정렬을 위해 좌측으로 당김 */
         
         min-height: 50px !important;
         aspect-ratio: 1 / 1 !important;
@@ -60,32 +60,35 @@ st.markdown("""
         border-radius: 0 !important;
         padding: 0 !important;
         
-        /* 텍스트 정렬 */
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        
-        /* 폰트 설정 (여기서는 기본값만 잡고 아래에서 덮어씌움) */
-        line-height: 1 !important; 
+        /* 폰트 */
+        font-size: 3.5vw !important;
+        line-height: 1 !important;
+        font-weight: bold;
         color: black !important;
         text-shadow: 
-            2px 2px 0 #fff, -2px 2px 0 #fff, 
-            2px -2px 0 #fff, -2px -2px 0 #fff !important;
-        z-index: 1;
-    }
-
-    /* 7. [진짜 핵심] 버튼 내부의 모든 텍스트 요소(p, div, span)를 직접 타격하여 크기 키움 */
-    div.stButton > button * {
-        font-size: 40px !important; /* PC 기준 매우 큼 */
-        line-height: 1 !important;
-        padding: 0 !important;
-        margin: 0 !important;
+            1.5px 1.5px 0 #fff, -1.5px 1.5px 0 #fff, 
+            1.5px -1.5px 0 #fff, -1.5px -1.5px 0 #fff !important;
+            
+        z-index: 1; /* 기본 레벨 */
     }
     
-    /* 반응형(모바일) 폰트 크기 조정 */
-    @media (max-width: 800px) {
-        div.stButton > button * {
-            font-size: 10vw !important; /* 화면 너비의 10% 크기로 강제 */
+    /* 7. [좌우 틈 제거 3단계 - 필살기] 같은 색 그림자로 틈새 메우기 (Caulking) */
+    /* 갈색(Primary) 칸은 갈색 그림자로 2px 확장 */
+    div.stButton > button[kind="primary"] {
+        background-color: #b58863 !important;
+        box-shadow: 0 0 0 2px #b58863 !important; 
+    }
+    /* 베이지색(Secondary) 칸은 베이지색 그림자로 2px 확장 */
+    div.stButton > button[kind="secondary"] {
+        background-color: #f0d9b5 !important;
+        box-shadow: 0 0 0 2px #f0d9b5 !important;
+    }
+
+    /* PC 화면 폰트 크기 고정 */
+    @media (min-width: 800px) {
+        div.stButton > button { 
+            font-size: 45px !important; 
+            min-height: 60px !important;
         }
     }
 
