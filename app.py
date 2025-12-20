@@ -7,52 +7,66 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: [핵심] Streamlit 그리드 시스템 강제 무력화 ---
+# --- CSS: 버튼을 108%로 키워서 틈새를 덮어버리는 전략 ---
 st.markdown("""
 <style>
-    /* 1. 기본 배경 및 변수 초기화 */
+    /* 1. 기본 배경 */
     .stApp { background-color: #f4f4f4; }
-    :root { --column-gap: 0px !important; }
-
-    /* 2. [가로 해결] 컬럼(Column) 간격 강제 제거 */
-    /* Streamlit이 계산한 width를 무시하고 flex-grow로 꽉 채웁니다 */
-    div[data-testid="column"] {
-        padding: 0px !important;
-        margin: 0px !important;
-        gap: 0px !important;
-        min-width: 0px !important;
-        flex: 1 1 auto !important; /* 강제로 늘려서 빈 공간 없앰 */
+    
+    /* 2. Streamlit의 모든 컬럼 간격(Gap) 변수 0으로 강제 초기화 */
+    :root {
+        --column-gap: 0px !important;
+        --row-gap: 0px !important;
     }
 
-    /* 3. [가로 해결] 가로 줄(Row) 컨테이너 설정 */
+    /* 3. 가로 줄(Row) 컨테이너 설정 */
     div[data-testid="stHorizontalBlock"] {
         gap: 0px !important;
         padding: 0px !important;
-        margin-bottom: -18px !important; /* 세로 줄 간격 당기기 */
-        display: flex !important; /* Flexbox 강제 적용 */
-        justify-content: center !important; /* 중앙 정렬 */
+        margin-bottom: -16px !important; /* 세로 줄 간격 강제로 당김 */
+        display: flex !important;
+        flex-wrap: nowrap !important; /* 줄바꿈 절대 금지 */
     }
 
-    /* 4. 버튼(체스판 칸) 스타일 */
+    /* 4. 세로 기둥(Column) 설정 */
+    div[data-testid="column"] {
+        padding: 0px !important;
+        margin: 0px !important;
+        flex: 1 !important; /* 비율대로 꽉 채움 */
+        min-width: 0 !important;
+    }
+    
+    /* 5. 버튼 감싸는 div 여백 제거 */
     div.stButton {
         padding: 0px !important;
         margin: 0px !important;
         width: 100% !important;
         border: 0px !important;
+        line-height: 0 !important;
     }
     
+    /* 6. [핵심] 버튼 본체 스타일: 크기를 키워서 틈새 덮기 */
     div.stButton > button {
-        /* 너비 100%로 꽉 채움 (Flex가 이미 붙여놓음) */
-        width: 100% !important;
-        aspect-ratio: 1 / 1 !important; /* 정사각형 유지 */
+        /* 너비를 108%로 설정하여 옆 칸의 틈새를 덮습니다 */
+        width: 108% !important;
+        margin-left: -4% !important; /* 중앙 정렬 보정 */
+        
+        /* 높이도 살짝 키워서 위아래 틈새 덮기 */
+        height: 100% !important;
+        aspect-ratio: 1 / 1 !important;
         
         /* 폰트 및 디자인 */
-        font-size: 3vw !important; /* 화면 크기에 따라 글자 크기 조절 */
+        font-size: 3vw !important; /* 반응형 폰트 크기 */
         line-height: 1 !important;
+        
+        /* 테두리 및 여백 제거 */
         padding: 0px !important;
-        margin: 0px !important;
         border: none !important;
         border-radius: 0px !important;
+        
+        /* 겹침 순서 조정 (안전장치) */
+        position: relative;
+        z-index: 1;
         
         /* 텍스트 스타일 */
         color: #000000 !important;
@@ -60,39 +74,43 @@ st.markdown("""
             1px 0 #fff, -1px 0 #fff, 0 1px #fff, 0 -1px #fff !important;
     }
 
-    /* 5. 마우스 호버 효과 */
-    div.stButton > button:hover {
+    /* 7. 마우스 올렸을 때 강조 */
+    div.stButton > button:hover, div.stButton > button:focus {
         background-color: #f7e034 !important;
-        transform: scale(1.02);
-        z-index: 10;
-        position: relative;
+        z-index: 100 !important; /* 겹친 것들 위로 올라옴 */
+        transform: scale(1.1); /* 더 크게 확대 */
+        box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        outline: none !important;
     }
 
-    /* 6. 체스판 색상 */
+    /* 8. 체스판 색상 */
     div.stButton > button[kind="primary"] {
         background-color: #D18B47 !important;
+        border: 1px solid #D18B47 !important; /* 미세한 경계선 색상 일치 */
     }
     div.stButton > button[kind="secondary"] {
         background-color: #FFCE9E !important;
+        border: 1px solid #FFCE9E !important;
     }
 
-    /* 7. 좌표 폰트 스타일 */
+    /* 9. 좌표 스타일 */
     .rank-label {
-        font-weight: bold; font-size: 20px; color: #555;
-        display: flex; align-items: center; justify-content: center; height: 100%;
-        margin-top: -5px;
+        font-weight: 900; font-size: 20px; color: #555;
+        display: flex; align-items: center; justify-content: flex-end; 
+        height: 100%; padding-right: 10px;
     }
     .file-label {
-        font-weight: bold; font-size: 20px; color: #555;
+        font-weight: 900; font-size: 20px; color: #555;
         display: flex; justify-content: center; width: 100%;
+        margin-top: 5px;
     }
-
-    /* 8. 사이드바 등 외부 버튼은 정상적으로 */
-    section[data-testid="stSidebar"] div.stButton > button,
+    
+    /* 10. 사이드바 등 다른 버튼 보호 */
+    section[data-testid="stSidebar"] div.stButton > button, 
     div[data-testid="stVerticalBlock"] > div > button {
-        width: auto !important; aspect-ratio: auto !important;
+        width: 100% !important; aspect-ratio: auto !important;
         border-radius: 5px !important; font-size: 16px !important;
-        padding: 0.5rem 1rem !important; margin-bottom: 10px !important;
+        padding: 0.5rem 1rem !important; margin: 0 0 10px 0 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -217,16 +235,15 @@ with main_col:
     files = range(8) if is_white else range(7, -1, -1)
     file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-    # 비율 조정: 왼쪽 좌표용(0.5) + 체스판 8칸(1.0씩)
-    # 비율을 1:1:1로 주면 Flexbox가 균등하게 배분하려 노력합니다.
-    col_ratios = [0.5] + [1] * 8
+    # 좌표(0.6) + 8칸(1.0) 비율 설정
+    col_ratios = [0.6] + [1] * 8
 
     # --- 1. 체스판 루프 ---
     for rank in ranks:
-        # gap="small" 조차 제거하고 CSS로 제어합니다. (여기서 gap 인자 생략 시 기본값인데 CSS가 덮음)
+        # gap을 없앴지만, CSS에서 width: 108%를 적용했으므로 서로 겹치게 됩니다.
         cols = st.columns(col_ratios)
         
-        # 숫자 좌표 (왼쪽)
+        # 숫자 좌표
         cols[0].markdown(f"<div class='rank-label'>{rank + 1}</div>", unsafe_allow_html=True)
         
         for i, file in enumerate(files):
@@ -237,7 +254,7 @@ with main_col:
             is_dark = (rank + file) % 2 == 0
             btn_type = "primary" if is_dark else "secondary"
             
-            # 버튼 렌더링
+            # 버튼
             if cols[i+1].button(symbol, key=f"sq_{sq}", type=btn_type):
                 handle_click(sq)
                 st.rerun()
