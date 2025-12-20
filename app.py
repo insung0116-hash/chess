@@ -7,29 +7,31 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 버튼을 110%로 키워서 서로 겹치게 만드는 전략 ---
+# --- CSS: [최후의 수단] 음수 마진을 이용한 강제 겹침 ---
 st.markdown("""
 <style>
     /* 1. 배경 */
     .stApp { background-color: #f4f4f4; }
     
-    /* 2. 가로 줄(Row) 간격 강제 제거 (세로 틈새 없애기) */
-    div[data-testid="stHorizontalBlock"] {
-        margin-bottom: -18px !important; /* 윗줄과 아랫줄을 강제로 겹치게 당김 */
-        gap: 0px !important;
-        padding: 0px !important;
-        overflow: visible !important;
+    /* 2. Streamlit 레이아웃 변수 강제 초기화 (gap 관련) */
+    :root {
+        --column-gap: 0px !important;
     }
 
-    /* 3. 컬럼(열) 내부 여백 제거 */
-    div[data-testid="column"] {
+    /* 3. 수평/수직 컨테이너 틈새 제거 및 오버플로우 해제 */
+    div[data-testid="stHorizontalBlock"], div[data-testid="column"] {
+        gap: 0px !important;
         padding: 0px !important;
         margin: 0px !important;
-        min-width: 0px !important;
-        overflow: visible !important; /* 버튼이 커져서 삐져나가도 잘리지 않게 */
+        overflow: visible !important; /* 겹친 부분이 잘리지 않게 필수 */
+    }
+
+    /* 4. 세로 줄(Row) 간격 제거 (위로 당기기) */
+    div[data-testid="stHorizontalBlock"] {
+        margin-bottom: -18px !important; /* 줄 사이 틈 제거 */
     }
     
-    /* 4. 버튼 감싸는 컨테이너 초기화 */
+    /* 5. 버튼 감싸는 컨테이너 초기화 */
     div.stButton {
         padding: 0px !important;
         margin: 0px !important;
@@ -37,81 +39,76 @@ st.markdown("""
         border: 0px !important;
     }
     
-    /* 5. [핵심] 버튼 본체 스타일 (가로/세로 확장 및 겹침) */
+    /* 6. [핵심] 버튼 본체: 옆 버튼과 물리적으로 겹치게 만들기 */
     div.stButton > button {
-        /* 너비를 110%로 설정하여 원래 칸보다 더 넓게 만듭니다 (좌우 틈새 원천 봉쇄) */
-        width: 110% !important;
+        /* 너비를 120%로 설정 (본인 구역보다 훨씬 크게) */
+        width: 120% !important;
         
-        /* 양옆으로 5%씩 삐져나가게 하여 옆 칸과 물리적으로 겹치게 만듭니다 */
-        margin-left: -5% !important;
-        margin-right: -5% !important;
+        /* 왼쪽으로 -10%, 오른쪽으로 -10% 당겨서 양옆 버튼 위로 확장 */
+        margin-left: -10% !important;
+        margin-right: -10% !important;
         
-        /* 높이 설정 및 정사각형 비율 */
+        /* 높이 정사각형 고정 */
         aspect-ratio: 1 / 1 !important;
         
-        /* 폰트 설정 */
+        /* 폰트 및 스타일 */
         font-size: 38px !important;
         line-height: 1 !important;
-        
-        /* 테두리 제거 */
         padding: 0px !important;
         border: none !important;
         border-radius: 0px !important;
         
-        /* 배경색 렌더링 보정 (미세한 흰 선 제거용) */
-        box-shadow: 0px 0px 0px 1px transparent; 
+        /* 흰색 선 방지용 그림자 (내부 틈새 메꿈) */
+        box-shadow: 0 0 0 1px rgba(0,0,0,0) !important;
         
-        /* 겹침 순서 */
+        /* 겹침 순서 기본값 */
         position: relative;
         z-index: 1;
         
-        /* 텍스트 색상 */
+        /* 텍스트 스타일 */
         color: #000000 !important;
         text-shadow: 
             1.5px 0 #fff, -1.5px 0 #fff, 0 1.5px #fff, 0 -1.5px #fff,
             1px 1px #fff, -1px -1px #fff, 1px -1px #fff, -1px 1px #fff !important;
     }
 
-    /* 6. 마우스 올렸을 때 (겹친 상태에서 해당 칸만 위로 툭 튀어나오게) */
+    /* 7. 마우스 호버 효과 (선택된 칸이 가장 위로 올라오게) */
     div.stButton > button:hover, div.stButton > button:focus {
         background-color: #f7e034 !important;
-        z-index: 100 !important; /* 최상단으로 이동 */
-        transform: scale(1.05); /* 약간 확대 */
-        box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        z-index: 9999 !important; /* 무조건 최상단 */
+        transform: scale(1.1); /* 강조 */
+        box-shadow: 0 0 15px rgba(0,0,0,0.6) !important;
         outline: none !important;
     }
 
-    /* 7. 체스판 색상 */
+    /* 8. 체스판 색상 설정 */
     div.stButton > button[kind="primary"] {
         background-color: #D18B47 !important;
-        /* 색상 경계선 겹침 보정 */
-        border: 1px solid #D18B47 !important; 
     }
     div.stButton > button[kind="secondary"] {
         background-color: #FFCE9E !important;
-        border: 1px solid #FFCE9E !important;
     }
 
-    /* 8. 좌표 레이아웃 보정 */
-    .rank-label {
-        font-weight: 900; font-size: 20px; color: #555;
-        display: flex; align-items: center; justify-content: center; height: 100%;
-        margin-right: -10px; margin-top: -8px;
-    }
-    .file-label {
-        font-weight: 900; font-size: 20px; color: #555;
-        display: flex; justify-content: center; width: 100%;
-        padding-top: 15px;
-    }
-
-    /* 9. 사이드바 및 기타 버튼 복구 */
+    /* 9. 사이드바 등 외부 버튼 보호 */
     section[data-testid="stSidebar"] div.stButton > button,
     div[data-testid="stVerticalBlock"] > div > button {
         width: 100% !important; margin: 0 !important; margin-bottom: 10px !important;
         height: auto !important; aspect-ratio: auto !important;
         border-radius: 8px !important; font-size: 16px !important;
         text-shadow: none !important; padding: 0.5rem 1rem !important;
-        border: 1px solid rgba(0,0,0,0.2) !important;
+        margin-left: 0 !important; margin-right: 0 !important;
+    }
+
+    /* 10. 좌표 라벨 위치 잡기 */
+    .rank-label {
+        font-weight: 900; font-size: 20px; color: #555;
+        display: flex; align-items: center; justify-content: center; height: 100%;
+        margin-right: -10px; margin-top: -8px; z-index: 0;
+    }
+    .file-label {
+        font-weight: 900; font-size: 20px; color: #555;
+        display: flex; justify-content: center; width: 100%;
+        padding-top: 15px; z-index: 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -240,9 +237,10 @@ with main_col:
 
     # --- 1. 체스판 루프 ---
     for rank in ranks:
+        # gap="small"을 유지하되 CSS로 덮어씁니다
         cols = st.columns(col_ratios, gap="small")
         
-        # 숫자 좌표 (왼쪽)
+        # 숫자 좌표
         cols[0].markdown(f"<div class='rank-label'>{rank + 1}</div>", unsafe_allow_html=True)
         
         for i, file in enumerate(files):
@@ -260,7 +258,7 @@ with main_col:
 
     # --- 2. 하단 좌표 ---
     footer = st.columns(col_ratios, gap="small")
-    footer[0].write("") # 빈칸
+    footer[0].write("")
     for i, label in enumerate(file_labels):
         footer[i+1].markdown(f"<div class='file-label'>{label}</div>", unsafe_allow_html=True)
 
