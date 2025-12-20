@@ -85,8 +85,8 @@ st.markdown("""
     @media (min-width: 800px) {
         div.stButton > button { 
             /* PC: 45px -> 100px (대폭 확대) */
-            font-size: 100px !important; 
-            min-height: 100px !important;
+            font-size: 200px !important; 
+            min-height: 60px !important;
         }
     }
 
