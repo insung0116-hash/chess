@@ -260,9 +260,6 @@ with status_container:
 
     if st.session_state.board.is_game_over():
         st.success(f"🎉 게임 종료: {st.session_state.board.result()}", icon="🏆")
-        if st.button("📊 이 게임 분석하기", use_container_width=True):
-             analyze_game()
-             st.rerun()
 
 # --- 체스판 렌더링 (틈새 없음) ---
 is_white = st.session_state.player_color == chess.WHITE
