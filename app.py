@@ -7,10 +7,10 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 체스말(텍스트) 크기 강제 확대 ---
+# --- CSS: 격자 구조 복구 + 시각적 확대 전략 ---
 st.markdown("""
 <style>
-    /* 1. 기본 배경 및 레이아웃 */
+    /* 1. 기본 배경 */
     .stApp { background-color: #e0e0e0; }
     .block-container {
         padding-top: 1rem;
@@ -18,121 +18,111 @@ st.markdown("""
         max-width: 800px;
     }
 
-    /* 2. 오버플로우 허용 (말이 커서 삐져나와도 잘리지 않게) */
-    div[data-testid="column"], 
-    div[data-testid="stHorizontalBlock"], 
-    div.stButton,
-    div.stButton > button {
-        overflow: visible !important;
-    }
-
-    /* 3. 틈새 제거 (세로) */
-    div[data-testid="stHorizontalBlock"] {
-        gap: 0 !important; padding: 0 !important; margin: 0 !important;
-        margin-bottom: -14px !important; 
-    }
-
-    /* 4. 틈새 제거 (가로) */
+    /* 2. 컬럼 및 로우 간격 제거 (물리적 틈 제거) */
     div[data-testid="column"] {
         padding: 0 !important; margin: 0 !important;
-        flex: 1 1 auto !important; min-width: 0 !important;
     }
-    
-    /* 5. 버튼 컨테이너 초기화 */
+    div[data-testid="stHorizontalBlock"] {
+        gap: 0 !important; padding: 0 !important; margin: 0 !important;
+    }
+
+    /* 3. 버튼 컨테이너 초기화 */
     div.stButton {
         margin: 0 !important; padding: 0 !important;
         width: 100% !important; border: 0 !important;
+        /* 버튼 높이를 강제로 통일하여 계단 현상 방지 */
+        height: auto !important;
     }
 
-    /* 6. [핵심] 버튼 본체 스타일 */
+    /* 4. [핵심] 버튼 본체 스타일 (격자 복구) */
     div.stButton > button {
-        width: 115% !important;        
-        margin-left: -7.5% !important; 
-        
-        min-height: 50px !important;
+        width: 100% !important;  /* 115% 제거 -> 100%로 정위치 */
         aspect-ratio: 1 / 1 !important;
         border: none !important;
         border-radius: 0 !important;
         padding: 0 !important;
+        margin: 0 !important; /* 마진 0으로 격자 딱 맞춤 */
         
-        /* 텍스트 정렬 */
+        /* [중요] 격자는 유지하되, 시각적으로만 3% 확대하여 미세한 틈을 덮어버림 */
+        transform: scale(1.03); 
+        
+        /* 내용물 정렬 */
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         
-        /* 폰트 설정 (여기서는 기본값만 잡고 아래에서 덮어씌움) */
-        line-height: 1 !important; 
-        color: black !important;
-        text-shadow: 
-            2px 2px 0 #fff, -2px 2px 0 #fff, 
-            2px -2px 0 #fff, -2px -2px 0 #fff !important;
         z-index: 1;
     }
 
-    /* 7. [진짜 핵심] 버튼 내부의 모든 텍스트 요소(p, div, span)를 직접 타격하여 크기 키움 */
+    /* 5. [체스말 크기] 내부 텍스트 강제 확대 */
     div.stButton > button * {
-        font-size: 70px !important; /* PC 기준 매우 큼 */
-        line-height: 1 !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    
-    /* 반응형(모바일) 폰트 크기 조정 */
-    @media (max-width: 800px) {
-        div.stButton > button * {
-            font-size: 10vw !important; /* 화면 너비의 10% 크기로 강제 */
-        }
+        /* 폰트 크기: 버튼의 70% 정도를 차지하도록 설정 */
+        font-size: min(8vw, 65px) !important; 
+        
+        /* 줄 간격을 0으로 만들어 높이 왜곡 방지 */
+        line-height: 0 !important; 
+        
+        /* 폰트 굵기 및 외곽선 */
+        font-weight: 900 !important;
+        color: black !important;
+        
+        /* 텍스트 외곽선 (가독성) */
+        text-shadow: 
+            2px 2px 0 #fff, -2px 2px 0 #fff, 
+            2px -2px 0 #fff, -2px -2px 0 #fff !important;
+            
+        /* 미세 위치 조정 (이모지 특성상 살짝 위로 쏠리는 것 보정) */
+        position: relative;
+        top: -3px; 
     }
 
-    /* 8. 틈새 메우기 (Caulking) */
+    /* 6. 색상 및 줄눈 효과 */
     div.stButton > button[kind="primary"] {
         background-color: #b58863 !important;
-        box-shadow: 0 0 0 2px #b58863 !important; 
+        /* 버튼 자체의 색상으로 경계선 확장 */
+        outline: 1px solid #b58863 !important;
     }
     div.stButton > button[kind="secondary"] {
         background-color: #f0d9b5 !important;
-        box-shadow: 0 0 0 2px #f0d9b5 !important;
+        outline: 1px solid #f0d9b5 !important;
     }
 
-    /* 9. 마우스 호버 */
+    /* 7. 마우스 호버 및 클릭 효과 */
     div.stButton > button:hover {
         background-color: #ffe066 !important;
-        box-shadow: 0 0 0 2px #ffe066, 0 0 15px rgba(0,0,0,0.5) !important;
-        z-index: 100 !important;
-        transform: scale(1.15);
+        outline: 2px solid #ffe066 !important;
+        z-index: 100 !important; /* 호버 시 맨 위로 */
         cursor: pointer;
+        transform: scale(1.1) !important; /* 호버 시 조금 더 커짐 */
     }
-    
-    /* 10. 선택 효과 */
     div.stButton > button:focus {
         background-color: #ffcc00 !important;
         box-shadow: inset 0 0 0 4px #d9534f !important;
         z-index: 50 !important;
     }
 
-    /* 11. 좌표 및 외부 UI */
+    /* 8. 좌표 및 외부 UI 정리 */
     .rank-label {
         height: 100%; display: flex; align-items: center; justify-content: flex-end;
         font-weight: bold; font-size: 20px; color: #333; padding-right: 15px;
-        margin-top: -10px; 
     }
     .file-label {
         width: 100%; text-align: center; font-weight: bold; font-size: 20px; color: #333;
         padding-top: 10px;
     }
+    
+    /* 컨트롤 버튼 등 다른 버튼은 정상 크기로 유지 */
     .control-area div.stButton > button, 
     section[data-testid="stSidebar"] div.stButton > button {
         width: 100% !important; margin: 5px 0 !important;
         aspect-ratio: auto !important; 
         background-color: white !important; border: 1px solid #ccc !important;
         box-shadow: none !important; transform: none !important;
-        min-height: auto !important; padding: 0.5rem !important;
+        outline: none !important;
     }
-    
-    /* 사이드바/컨트롤 버튼의 폰트 크기는 작게 유지 */
     .control-area div.stButton > button *,
     section[data-testid="stSidebar"] div.stButton > button * {
-        font-size: 16px !important;
+        font-size: 16px !important; line-height: 1.5 !important; top: 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -150,7 +140,7 @@ stockfish_path = shutil.which("stockfish")
 if not stockfish_path and os.path.exists("/usr/games/stockfish"):
     stockfish_path = "/usr/games/stockfish"
 
-# --- 로직 ---
+# --- 로직 함수들 ---
 def play_engine_move(skill_level):
     if not stockfish_path or st.session_state.board.is_game_over(): return
     try:
@@ -254,12 +244,13 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.divider()
 
-# --- 체스판 렌더링 ---
+# --- 메인 체스판 ---
 is_white = st.session_state.player_color == chess.WHITE
 ranks = range(7, -1, -1) if is_white else range(8)
 files = range(8) if is_white else range(7, -1, -1)
 file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
+# 좌표와 체스판 비율
 col_ratios = [0.5] + [1] * 8
 
 for rank in ranks:
@@ -274,10 +265,12 @@ for rank in ranks:
         is_dark = (rank + file) % 2 == 0
         btn_type = "primary" if is_dark else "secondary"
         
+        # 버튼 생성 (빈 칸일 때도 공간 유지)
         if cols[i+1].button(symbol, key=f"sq_{sq}", type=btn_type):
             handle_click(sq)
             st.rerun()
 
+# 하단 알파벳
 footer = st.columns(col_ratios)
 footer[0].write("")
 for i, label in enumerate(file_labels):
