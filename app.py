@@ -55,8 +55,8 @@ st.markdown("""
         padding: 0 !important;
         
         /* --- [여기서 크기를 조절합니다] --- */
-        /* 모바일/반응형: 3.5vw -> 5.5vw (대폭 확대) */
-        font-size: 5.5vw !important; 
+        /* 모바일/반응형: 3.5vw -> 10vw (대폭 확대) */
+        font-size: 10vw !important; 
         
         /* 폰트 높이 설정 (수직 중앙 정렬 유지) */
         line-height: 1.0 !important; 
@@ -84,8 +84,8 @@ st.markdown("""
     /* 8. PC 화면에서 폰트 크기 고정 */
     @media (min-width: 800px) {
         div.stButton > button { 
-            /* PC: 45px -> 100px (대폭 확대) */
-            font-size: 200px !important; 
+            /* PC: 45px -> 65px (대폭 확대) */
+            font-size: 65px !important; 
             min-height: 60px !important;
         }
     }
