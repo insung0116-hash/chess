@@ -60,7 +60,7 @@ st.markdown("""
         border-radius: 0 !important;
         padding: 0 !important;
         
-    /* 7. [좌우 틈 제거 3단계 - 필살기] 같은 색 그림자로 틈새 메우기 (Caulking) */
+    /* 7-1. [좌우 틈 제거 3단계 - 필살기] 같은 색 그림자로 틈새 메우기 (Caulking) */
     /* 갈색(Primary) 칸은 갈색 그림자로 2px 확장 */
     div.stButton > button[kind="primary"] {
         background-color: #b58863 !important;
@@ -72,16 +72,7 @@ st.markdown("""
         box-shadow: 0 0 0 2px #f0d9b5 !important;
     }
 
-    /* 폰트 설정 (여기서는 기본값만 잡고 아래에서 덮어씌움) */
-        line-height: 1 !important; 
-        color: black !important;
-        text-shadow: 
-            2px 2px 0 #fff, -2px 2px 0 #fff, 
-            2px -2px 0 #fff, -2px -2px 0 #fff !important;
-        z-index: 1;
-    }
-
-    /* 7. [진짜 핵심] 버튼 내부의 모든 텍스트 요소(p, div, span)를 직접 타격하여 크기 키움 */
+    /* 7-2. [진짜 핵심] 버튼 내부의 모든 텍스트 요소(p, div, span)를 직접 타격하여 크기 키움 */
     div.stButton > button * {
         font-size: 70px !important; /* PC 기준 매우 큼 */
         line-height: 1 !important;
