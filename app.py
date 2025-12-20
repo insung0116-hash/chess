@@ -50,7 +50,7 @@ st.markdown("""
         margin: 0 !important; padding: 0 !important;
         
         /* 틈새 제거를 위해 살짝 확대하여 겹치게 함 */
-        transform: scale(1.25); 
+        transform: scale(1.1); 
         
         position: relative !important;
         overflow: hidden !important;
@@ -98,7 +98,7 @@ st.markdown("""
     }
     .file-label {
         width: 100%; text-align: center; font-weight: bold; font-size: 20px; color: #333;
-        padding-top: 20px;
+        padding-top: 10px;
     }
     
     /* 10. [사이드바 버튼] 커스텀 스타일 */
