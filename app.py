@@ -7,86 +7,101 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 버튼 확대(Overlap) 전략 ---
+# --- CSS: 모든 여백을 0으로 만들고, 줄 간격을 강제로 닫음 ---
 st.markdown("""
 <style>
-    /* 1. 기본 배경 및 레이아웃 */
+    /* 1. 배경 */
     .stApp { background-color: #e0e0e0; }
-    div.block-container {
-        padding-top: 2rem;
+    
+    /* 2. 메인 컨테이너 너비 제한 (너무 퍼지지 않게) */
+    .block-container {
+        max-width: 800px;
+        padding-top: 1rem;
         padding-bottom: 5rem;
-        max-width: 850px; /* 체스판 중앙 정렬 */
     }
 
-    /* 2. Streamlit 컬럼/로우 간격 강제 제거 */
-    div[data-testid="column"] {
-        padding: 0px !important;
-        margin: 0px !important;
-        flex: 1 !important;
-        min-width: 0px !important;
+    /* 3. [핵심] Streamlit의 모든 자동 여백 변수 0으로 초기화 */
+    :root {
+        --column-gap: 0px !important;
+        --row-gap: 0px !important;
     }
+
+    /* 4. 가로 줄(Row) 컨테이너: 줄 사이의 틈(1rem)을 강제로 없앰 */
     div[data-testid="stHorizontalBlock"] {
         gap: 0px !important;
         padding: 0px !important;
-    }
-    
-    /* 3. 버튼 컨테이너 초기화 */
-    div.stButton {
         margin: 0px !important;
-        padding: 0px !important;
-        width: 100% !important;
-        border: 0px !important;
+        /* 아래 줄과의 간격을 없애기 위해 음수 마진 적용 */
+        margin-bottom: -8px !important; 
     }
 
-    /* 4. [핵심] 버튼을 104%로 확대하여 틈새 덮어씌우기 */
-    div.stButton > button {
-        width: 104% !important;      /* 너비를 100%보다 크게 */
-        height: 100% !important;
-        margin-left: -2% !important; /* 좌우로 조금씩 당겨서 중앙 맞춤 */
-        margin-top: -1px !important; /* 위아래 틈새 방지 */
-        margin-bottom: -1px !important;
-        
-        aspect-ratio: 1 / 1 !important;
-        border: none !important;
-        border-radius: 0px !important;
+    /* 5. 세로 기둥(Column) 컨테이너: 옆 기둥과의 틈 제거 */
+    div[data-testid="column"] {
         padding: 0px !important;
+        margin: 0px !important;
+        min-width: 0px !important;
+        flex: 1 !important;
+    }
+
+    /* 6. 버튼 컨테이너 초기화 */
+    div.stButton {
+        padding: 0px !important;
+        margin: 0px !important;
+        border: 0px !important;
+        width: 100% !important;
+    }
+
+    /* 7. 버튼 본체 스타일: 꽉 채우기 */
+    div.stButton > button {
+        width: 100% !important;
+        aspect-ratio: 1 / 1 !important; /* 정사각형 강제 */
+        border-radius: 0px !important;
+        border: none !important;
+        padding: 0px !important;
+        margin: 0px !important;
         
-        /* 폰트 및 렌더링 */
-        font-size: 3vw !important; 
+        /* 폰트 설정 */
+        font-size: 3vw !important;
         line-height: 1 !important;
         font-weight: bold;
         color: black !important;
         text-shadow: 
             1.5px 1.5px 0 #fff, -1.5px 1.5px 0 #fff, 
             1.5px -1.5px 0 #fff, -1.5px -1.5px 0 #fff !important;
-            
-        /* 겹침 처리: 호버 시 위로 올라오도록 설정 */
-        position: relative;
-        z-index: 1;
-    }
-    
-    /* PC 화면 폰트 크기 제한 */
-    @media (min-width: 850px) {
-        div.stButton > button { font-size: 42px !important; }
+        
+        /* 렌더링 최적화 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
-    /* 5. 마우스 호버 효과 */
+    /* PC 화면에서 폰트 크기 고정 */
+    @media (min-width: 800px) {
+        div.stButton > button { font-size: 40px !important; }
+    }
+
+    /* 8. 미세한 흰 선(Sub-pixel gap) 제거용 그림자 테두리 */
+    div.stButton > button {
+        /* 버튼 색상과 같은 색의 그림자를 1px 밖으로 그려서 틈새를 메꿈 */
+        box-shadow: 0 0 0 1px rgba(0,0,0,0.05) inset !important; 
+    }
+
+    /* 9. 마우스 호버 효과 */
     div.stButton > button:hover {
         background-color: #ffe066 !important;
-        z-index: 10 !important; /* 호버된 기물이 다른 기물 위로 올라옴 */
-        transform: scale(1.08); /* 살짝 더 커짐 */
-        box-shadow: 0 0 10px rgba(0,0,0,0.5) !important;
+        z-index: 50;
+        transform: scale(1.05); /* 약간 확대 */
+        box-shadow: 0 0 10px rgba(0,0,0,0.3) !important;
         cursor: pointer;
     }
     
-    /* 6. 선택된 칸 */
+    /* 10. 선택 효과 */
     div.stButton > button:focus {
         background-color: #ffcc00 !important;
         box-shadow: inset 0 0 0 4px #d9534f !important;
-        z-index: 5 !important;
     }
 
-    /* 7. 체스판 색상 */
+    /* 11. 체스판 색상 */
     div.stButton > button[kind="primary"] {
         background-color: #b58863 !important; /* 갈색 */
     }
@@ -94,23 +109,24 @@ st.markdown("""
         background-color: #f0d9b5 !important; /* 베이지색 */
     }
 
-    /* 8. 좌표 디자인 */
+    /* 12. 좌표 디자인 */
     .rank-label {
         height: 100%; display: flex; align-items: center; justify-content: flex-end;
-        font-weight: bold; font-size: 20px; color: #333; padding-right: 10px;
+        font-weight: bold; font-size: 18px; color: #333; padding-right: 10px;
+        margin-top: -3px; /* 높이 미세 보정 */
     }
     .file-label {
-        width: 100%; text-align: center; font-weight: bold; font-size: 20px; color: #333;
+        width: 100%; text-align: center; font-weight: bold; font-size: 18px; color: #333;
         padding-top: 5px;
     }
     
-    /* 9. 컨트롤 패널 버튼 스타일 복구 */
+    /* 13. 외부 UI (사이드바 등) 정상화 */
     .control-area div.stButton > button, 
     section[data-testid="stSidebar"] div.stButton > button {
         width: 100% !important; margin: 5px 0 !important;
         aspect-ratio: auto !important; font-size: 16px !important;
-        border-radius: 5px !important; background-color: white !important;
-        border: 1px solid #ccc !important;
+        background-color: white !important; border: 1px solid #ccc !important;
+        box-shadow: none !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -143,7 +159,7 @@ def play_engine_move(skill_level):
 
 def show_hint():
     if not stockfish_path: return
-    with st.spinner("생각 중..."):
+    with st.spinner(".."):
         engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
         res = engine.play(st.session_state.board, chess.engine.Limit(time=1.0))
         st.session_state.hint_move = res.move
@@ -206,12 +222,11 @@ def analyze_game():
 # ================= UI 레이아웃 =================
 st.title("♟️ Classic Chess")
 
-# [사이드바 복구]
 with st.sidebar:
     st.header("설정")
     color_opt = st.radio("진영 선택", ["White (선공)", "Black (후공)"])
     new_color = chess.WHITE if "White" in color_opt else chess.BLACK
-    skill = st.slider("AI 레벨", 0, 20, 3, help="높을수록 AI가 똑똑해집니다.")
+    skill = st.slider("AI 레벨", 0, 20, 3)
     st.divider()
     if st.button("🔄 게임 재시작", type="primary", use_container_width=True):
         st.session_state.board = chess.Board()
@@ -221,7 +236,6 @@ with st.sidebar:
         st.session_state.analysis_data = None
         st.rerun()
 
-# 상단 컨트롤 패널
 st.markdown('<div class="control-area">', unsafe_allow_html=True)
 c1, c2, c3 = st.columns(3)
 with c1: 
@@ -234,22 +248,24 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.divider()
 
-# --- 메인 체스판 ---
+# --- 메인 보드 ---
 is_white = st.session_state.player_color == chess.WHITE
 ranks = range(7, -1, -1) if is_white else range(8)
 files = range(8) if is_white else range(7, -1, -1)
 file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-# 컬럼 비율: 좌표(0.4) + 체스판(1씩 8개)
+# 비율
 col_ratios = [0.4] + [1] * 8
 
 for rank in ranks:
+    # 틈새 제거의 핵심: 모든 st.columns 호출은 하나의 div.row로 감싸짐
+    # CSS에서 margin-bottom: -8px로 이 틈을 닫음
     cols = st.columns(col_ratios)
     
-    # 좌측 좌표
+    # 왼쪽 좌표
     cols[0].markdown(f"<div class='rank-label'>{rank + 1}</div>", unsafe_allow_html=True)
     
-    # 체스판
+    # 보드 칸
     for i, file in enumerate(files):
         sq = chess.square(file, rank)
         piece = st.session_state.board.piece_at(sq)
@@ -258,7 +274,6 @@ for rank in ranks:
         is_dark = (rank + file) % 2 == 0
         btn_type = "primary" if is_dark else "secondary"
         
-        # 버튼 렌더링
         if cols[i+1].button(symbol, key=f"sq_{sq}", type=btn_type):
             handle_click(sq)
             st.rerun()
@@ -269,21 +284,14 @@ footer[0].write("")
 for i, label in enumerate(file_labels):
     footer[i+1].markdown(f"<div class='file-label'>{label}</div>", unsafe_allow_html=True)
 
-# 하단 정보창
 st.divider()
-st.info(f"📢 {st.session_state.msg}")
-
-if st.session_state.board.is_check():
-    st.error("🔥 체크!")
+st.info(st.session_state.msg)
+if st.session_state.board.is_check(): st.error("🔥 체크!")
 if st.session_state.board.is_game_over():
-    st.success(f"게임 종료: {st.session_state.board.result()}")
-    if st.button("📊 분석 그래프"):
-        analyze_game()
-        st.rerun()
-if st.session_state.analysis_data:
-    st.line_chart(st.session_state.analysis_data)
+    st.success(f"종료: {st.session_state.board.result()}")
+    if st.button("📊 분석"): analyze_game(); st.rerun()
+if st.session_state.analysis_data: st.line_chart(st.session_state.analysis_data)
 
-# AI 턴
 if not st.session_state.board.is_game_over() and st.session_state.board.turn != st.session_state.player_color:
     play_engine_move(skill)
     st.rerun()
