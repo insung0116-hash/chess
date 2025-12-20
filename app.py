@@ -87,7 +87,7 @@ st.markdown("""
     /* PC 화면 폰트 크기 고정 */
     @media (min-width: 800px) {
         div.stButton > button { 
-            font-size: 70px !important; 
+            font-size: 100px !important; 
             min-height: 60px !important;
         }
     }
@@ -123,8 +123,8 @@ st.markdown("""
     .control-area div.stButton > button, 
     section[data-testid="stSidebar"] div.stButton > button {
         width: 100% !important; margin: 5px 0 !important;
-        aspect-ratio: auto !important; font-size: 16px !important;
-        background-color: white !important; border: 1px solid #ccc !important;
+        aspect-ratio: auto !important; font-size: 40px !important;
+        background-color: white !important; border: 10px solid #ccc !important;
         box-shadow: none !important; transform: none !important;
         min-height: auto !important;
     }
