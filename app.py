@@ -7,7 +7,7 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 격자 크기 강제 고정 및 체스말 위치 조정 ---
+# --- CSS: 격자 크기 엄격 통제 (내용물 영향 100% 차단) ---
 st.markdown("""
 <style>
     /* 1. 배경 및 기본 설정 */
@@ -18,70 +18,76 @@ st.markdown("""
         max-width: 800px;
     }
 
-    /* 2. [핵심] 컬럼(칸)의 크기가 내용물에 의해 늘어나지 않도록 강제 */
+    /* 2. [핵심 수정] 컬럼(칸) 스타일: Flex-basis를 0으로 강제 */
     div[data-testid="column"] {
         padding: 0 !important; margin: 0 !important;
-        min-width: 0 !important; /* 내용물이 커도 컬럼이 늘어나지 않음 */
-        flex: 1 1 0 !important;  /* 모든 컬럼을 1/n로 정확히 분할 */
+        /* 내용물 크기를 무시하고 오직 비율(flex-grow)로만 너비 결정 */
+        flex: 1 1 0px !important; 
+        min-width: 0px !important;
+        overflow: visible !important; /* 말이 삐져나와도 칸 자체는 늘어나지 않음 */
     }
+    
     div[data-testid="stHorizontalBlock"] {
         gap: 0 !important; padding: 0 !important; margin: 0 !important;
     }
 
-    /* 3. 버튼 컨테이너 초기화 */
+    /* 3. 버튼 컨테이너 */
     div.stButton {
         margin: 0 !important; padding: 0 !important;
         width: 100% !important; border: 0 !important;
         height: auto !important;
     }
 
-    /* 4. [핵심] 버튼 본체 스타일 (물리적 크기 고정) */
+    /* 4. [핵심 수정] 버튼 본체 스타일 */
     div.stButton > button {
         width: 100% !important;
-        aspect-ratio: 1 / 1 !important; /* 가로세로 1:1 비율 강제 */
+        /* 버튼이 부모(컬럼)보다 커지는 것을 방지 */
+        max-width: 100% !important; 
+        aspect-ratio: 1 / 1 !important;
         
-        /* 내용물이 커도 버튼 크기를 바꾸지 못하게 차단 */
-        min-height: 0 !important; 
-        min-width: 0 !important;
-        height: auto !important;
+        border: none !important;
+        border-radius: 0 !important;
         padding: 0 !important;
         margin: 0 !important;
         
-        /* 틈새 메우기 (1.02배 확대) */
-        transform: scale(1.02); 
+        /* 시각적 확대 (틈새 메우기) */
+        transform: scale(1.02);
         
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         
-        /* 오버플로우 허용 (말이 칸 밖으로 살짝 튀어나와도 됨) */
-        overflow: visible !important; 
         z-index: 1;
+        overflow: visible !important; /* 글자가 버튼 밖으로 나가도 됨 */
     }
 
-    /* 5. [체스말 스타일] 위치 하향 조정 */
+    /* 5. 체스말(텍스트) 스타일 */
     div.stButton > button * {
-        /* 폰트 크기: 화면 너비에 따라 반응형으로 조절 */
-        font-size: min(7.5vw, 65px) !important; 
+        /* 폰트 크기를 약간 줄여서 레이아웃 부담 완화 (여전히 큼) */
+        font-size: min(6.5vw, 60px) !important; 
         line-height: 1 !important; 
         font-weight: 400 !important; 
         color: black !important;
         
-        /* 텍스트 외곽선 */
         text-shadow: 
             1px 1px 0 #fff, -1px 1px 0 #fff, 
             1px -1px 0 #fff, -1px -1px 0 #fff !important;
             
-        /* [요청 반영] 위치를 아래로 내리기 */
+        /* 위치 조정: 아래쪽으로 내리기 */
         position: relative !important;
-        top: 8% !important;  /* 8% 정도 아래로 이동 */
+        top: 8% !important; 
         left: 0 !important;
         
-        /* 마우스 이벤트가 버튼을 통과하지 않게 */
+        /* 마우스 이벤트 통과 (클릭 씹힘 방지) */
         pointer-events: none; 
     }
+    
+    /* 텍스트 줄바꿈 방지 (혹시 모를 높이 변화 차단) */
+    div.stButton > button p {
+        white-space: nowrap !important;
+    }
 
-    /* 6. 색상 및 외곽선 */
+    /* 6. 색상 및 스타일 */
     div.stButton > button[kind="primary"] {
         background-color: #b58863 !important;
         outline: 1px solid #b58863 !important;
@@ -104,25 +110,25 @@ st.markdown("""
     .rank-label {
         height: 100%; display: flex; align-items: center; justify-content: flex-end;
         font-weight: bold; font-size: 18px; color: #333; padding-right: 15px;
+        white-space: nowrap; /* 줄바꿈 방지 */
     }
     .file-label {
         width: 100%; text-align: center; font-weight: bold; font-size: 18px; color: #333;
         padding-top: 5px;
     }
     
-    /* 9. 사이드바 버튼 (영향 안 받게 리셋) */
+    /* 9. 사이드바 버튼 리셋 */
     section[data-testid="stSidebar"] div.stButton > button {
         width: 100% !important; margin: 5px 0 !important;
         aspect-ratio: auto !important; 
         background-color: white !important; border: 1px solid #ccc !important;
         box-shadow: none !important; transform: none !important;
         outline: none !important; padding: 0.5rem !important;
-        overflow: hidden !important; /* 사이드바 버튼은 넘치면 자름 */
+        overflow: hidden !important;
     }
     section[data-testid="stSidebar"] div.stButton > button * {
         font-size: 16px !important; line-height: 1.5 !important; 
-        top: 0 !important; /* 사이드바 글자는 정위치 */
-        pointer-events: auto;
+        top: 0 !important; pointer-events: auto;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -247,7 +253,7 @@ ranks = range(7, -1, -1) if is_white else range(8)
 files = range(8) if is_white else range(7, -1, -1)
 file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-# 좌표 0.5, 체스판 1.0 비율
+# [중요] Flex-basis를 0으로 했기 때문에, 비율(flex-grow)이 절대적인 크기를 결정합니다.
 col_ratios = [0.5] + [1] * 8
 
 for rank in ranks:
