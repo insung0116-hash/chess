@@ -51,7 +51,7 @@ st.markdown("""
 
     /* 6. [좌우 틈 제거 2단계] 버튼 과장 확대 */
     div.stButton > button {
-        width: 115% !important;       /* 115%로 대폭 확대 */
+        width: 120% !important;       /* 115%로 대폭 확대 */
         margin-left: -7.5% !important; /* 중앙 정렬을 위해 좌측으로 당김 */
         
         min-height: 50px !important;
@@ -61,7 +61,7 @@ st.markdown("""
         padding: 0 !important;
         
         /* 폰트 */
-        font-size: 3.5vw !important;
+        font-size: 5vw !important;
         line-height: 1 !important;
         font-weight: bold;
         color: black !important;
@@ -87,7 +87,7 @@ st.markdown("""
     /* PC 화면 폰트 크기 고정 */
     @media (min-width: 800px) {
         div.stButton > button { 
-            font-size: 45px !important; 
+            font-size: 70px !important; 
             min-height: 60px !important;
         }
     }
