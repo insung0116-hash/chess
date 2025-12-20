@@ -55,8 +55,8 @@ st.markdown("""
         padding: 0 !important;
         
         /* --- [여기서 크기를 조절합니다] --- */
-        /* 모바일/반응형: 3.5vw -> 10vw (대폭 확대) */
-        font-size: 10vw !important; 
+        /* 모바일/반응형: 3.5vw -> 5vw (대폭 확대) */
+        font-size: 5vw !important; 
         
         /* 폰트 높이 설정 (수직 중앙 정렬 유지) */
         line-height: 1.0 !important; 
