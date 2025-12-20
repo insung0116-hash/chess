@@ -16,7 +16,7 @@ st.markdown("""
         padding-top: 1rem;
         padding-bottom: 5rem;
         /* [수정] 체스판 크기 대폭 확대 (기존 800px -> 1200px) */
-        max-width: 1200px !important; 
+        max-width: 1000px !important; 
     }
 
     /* 2. 컬럼(칸) 간격 완벽 제거 */
@@ -39,14 +39,14 @@ st.markdown("""
 
     /* 4. 버튼 본체 (네모 칸) */
     div.stButton > button {
-        width: 100% !important;
+        width: 150% !important;
         aspect-ratio: 1 / 1 !important;
         border: none !important;
         border-radius: 0 !important;
         margin: 0 !important; padding: 0 !important;
         
-        /* [수정] 틈새를 없애기 위해 1.005배 살짝 확대하여 서로 겹치게 함 */
-        transform: scale(1.005); 
+        /* [수정] 틈새를 없애기 위해 1.5배 살짝 확대하여 서로 겹치게 함 */
+        transform: scale(1.5); 
         
         position: relative !important;
         overflow: hidden !important;
@@ -64,8 +64,8 @@ st.markdown("""
         /* [수정] 수직 위치: 약간 아래 (55%) */
         top: 55% !important;
         
-        /* [수정] 수평 위치: 정중앙(50%)에서 왼쪽으로 이동 -> 48% */
-        left: 48% !important; 
+        /* [수정] 수평 위치: 정중앙(50%)에서 왼쪽으로 이동 -> 45% */
+        left: 45% !important; 
         
         /* 중앙 정렬 기준점 */
         transform: translate(-50%, -50%) !important;
