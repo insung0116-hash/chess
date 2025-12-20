@@ -48,7 +48,7 @@ st.markdown("""
         margin: 0px !important;
         
         /* 미세한 하얀 선(1px)까지 덮기 위해 200%로 확대 */
-        transform: scale(2); 
+        transform: scale(1); 
         
         position: relative !important;
         z-index: 1;
