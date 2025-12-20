@@ -7,95 +7,86 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 틈새를 없애는 가장 강력하고 단순한 스타일 ---
+# --- CSS: 버튼 확대(Overlap) 전략 ---
 st.markdown("""
 <style>
-    /* 1. 기본 배경 */
+    /* 1. 기본 배경 및 레이아웃 */
     .stApp { background-color: #e0e0e0; }
-    
-    /* 2. [핵심] Streamlit의 레이아웃 간격 변수(Gap)를 0으로 강제 초기화 */
-    :root {
-        --column-gap: 0px !important;
-        --row-gap: 0px !important;
-    }
-
-    /* 3. 메인 컨테이너 패딩 조절 */
-    .block-container {
+    div.block-container {
         padding-top: 2rem;
         padding-bottom: 5rem;
-        max-width: 800px; /* 체스판이 너무 넓게 퍼지지 않도록 중앙 정렬 */
+        max-width: 850px; /* 체스판 중앙 정렬 */
     }
 
-    /* 4. [가로 틈 제거] 컬럼(Column) 설정 */
+    /* 2. Streamlit 컬럼/로우 간격 강제 제거 */
     div[data-testid="column"] {
         padding: 0px !important;
         margin: 0px !important;
+        flex: 1 !important;
         min-width: 0px !important;
-        flex: 1 !important; /* 빈 공간 없이 꽉 채우기 */
-        gap: 0px !important;
     }
-
-    /* 5. [세로 틈 제거] 가로 줄(Row) 설정 */
     div[data-testid="stHorizontalBlock"] {
         gap: 0px !important;
         padding: 0px !important;
-        margin-bottom: -16px !important; /* 줄 사이 간격 강제 당김 (음수 마진) */
     }
-
-    /* 6. 버튼 감싸는 div 초기화 */
+    
+    /* 3. 버튼 컨테이너 초기화 */
     div.stButton {
-        padding: 0px !important;
         margin: 0px !important;
+        padding: 0px !important;
         width: 100% !important;
         border: 0px !important;
-        line-height: 0 !important;
     }
 
-    /* 7. [필살기] 버튼 본체: 102%로 키워서 틈새 덮어버리기 */
+    /* 4. [핵심] 버튼을 104%로 확대하여 틈새 덮어씌우기 */
     div.stButton > button {
-        width: 102% !important; /* 100%보다 살짝 크게 해서 옆 칸과 겹침 */
-        margin-left: -1% !important; /* 중앙 정렬 보정 */
-        aspect-ratio: 1 / 1 !important; /* 정사각형 유지 */
+        width: 104% !important;      /* 너비를 100%보다 크게 */
+        height: 100% !important;
+        margin-left: -2% !important; /* 좌우로 조금씩 당겨서 중앙 맞춤 */
+        margin-top: -1px !important; /* 위아래 틈새 방지 */
+        margin-bottom: -1px !important;
         
+        aspect-ratio: 1 / 1 !important;
         border: none !important;
         border-radius: 0px !important;
         padding: 0px !important;
         
-        font-size: 3vw !important; /* 반응형 폰트 */
-        font-weight: bold;
+        /* 폰트 및 렌더링 */
+        font-size: 3vw !important; 
         line-height: 1 !important;
-        
-        /* 텍스트(체스말) 렌더링 */
+        font-weight: bold;
         color: black !important;
         text-shadow: 
             1.5px 1.5px 0 #fff, -1.5px 1.5px 0 #fff, 
             1.5px -1.5px 0 #fff, -1.5px -1.5px 0 #fff !important;
-        
-        /* 겹침 순서 */
+            
+        /* 겹침 처리: 호버 시 위로 올라오도록 설정 */
         position: relative;
         z-index: 1;
     }
     
-    /* PC 화면에서 폰트 크기 제한 (너무 커지지 않게) */
-    @media (min-width: 800px) {
-        div.stButton > button { font-size: 40px !important; }
+    /* PC 화면 폰트 크기 제한 */
+    @media (min-width: 850px) {
+        div.stButton > button { font-size: 42px !important; }
     }
 
-    /* 8. 마우스 호버 효과 */
+    /* 5. 마우스 호버 효과 */
     div.stButton > button:hover {
         background-color: #ffe066 !important;
-        z-index: 100 !important; /* 호버 시 가장 위로 */
-        transform: scale(1.05);
+        z-index: 10 !important; /* 호버된 기물이 다른 기물 위로 올라옴 */
+        transform: scale(1.08); /* 살짝 더 커짐 */
         box-shadow: 0 0 10px rgba(0,0,0,0.5) !important;
+        cursor: pointer;
     }
     
-    /* 9. 선택된 칸 표시 */
+    /* 6. 선택된 칸 */
     div.stButton > button:focus {
         background-color: #ffcc00 !important;
-        outline: none !important;
+        box-shadow: inset 0 0 0 4px #d9534f !important;
+        z-index: 5 !important;
     }
 
-    /* 10. 체스판 색상 */
+    /* 7. 체스판 색상 */
     div.stButton > button[kind="primary"] {
         background-color: #b58863 !important; /* 갈색 */
     }
@@ -103,25 +94,23 @@ st.markdown("""
         background-color: #f0d9b5 !important; /* 베이지색 */
     }
 
-    /* 11. 좌표 스타일 */
+    /* 8. 좌표 디자인 */
     .rank-label {
         height: 100%; display: flex; align-items: center; justify-content: flex-end;
-        font-weight: bold; font-size: 18px; color: #555; padding-right: 8px;
-        margin-top: -5px;
+        font-weight: bold; font-size: 20px; color: #333; padding-right: 10px;
     }
     .file-label {
-        width: 100%; text-align: center; font-weight: bold; font-size: 18px; color: #555;
+        width: 100%; text-align: center; font-weight: bold; font-size: 20px; color: #333;
         padding-top: 5px;
     }
     
-    /* 12. 사이드바 및 기능 버튼은 정상적으로 */
-    section[data-testid="stSidebar"] div.stButton > button,
-    div.control-area div.stButton > button {
-        width: 100% !important; aspect-ratio: auto !important;
-        border-radius: 8px !important; margin: 5px 0 !important;
-        font-size: 16px !important; text-shadow: none !important;
-        background-color: #ffffff !important; border: 1px solid #ccc !important;
-        box-shadow: none !important;
+    /* 9. 컨트롤 패널 버튼 스타일 복구 */
+    .control-area div.stButton > button, 
+    section[data-testid="stSidebar"] div.stButton > button {
+        width: 100% !important; margin: 5px 0 !important;
+        aspect-ratio: auto !important; font-size: 16px !important;
+        border-radius: 5px !important; background-color: white !important;
+        border: 1px solid #ccc !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -217,17 +206,13 @@ def analyze_game():
 # ================= UI 레이아웃 =================
 st.title("♟️ Classic Chess")
 
-# [1. 사이드바 복구] - 난이도 조절 기능
+# [사이드바 복구]
 with st.sidebar:
     st.header("설정")
     color_opt = st.radio("진영 선택", ["White (선공)", "Black (후공)"])
     new_color = chess.WHITE if "White" in color_opt else chess.BLACK
-    
-    # 난이도 조절 슬라이더 복구
-    skill = st.slider("🤖 AI 레벨 (난이도)", 0, 20, 3, help="높을수록 AI가 강력해집니다.")
-    
+    skill = st.slider("AI 레벨", 0, 20, 3, help="높을수록 AI가 똑똑해집니다.")
     st.divider()
-    
     if st.button("🔄 게임 재시작", type="primary", use_container_width=True):
         st.session_state.board = chess.Board()
         st.session_state.selected_square = None
@@ -244,28 +229,27 @@ with c1:
 with c2: 
     if st.button("➡️ 되살리기", use_container_width=True): redo_move(); st.rerun()
 with c3: 
-    if st.button("💡 힌트 보기", use_container_width=True): show_hint(); st.rerun()
+    if st.button("💡 힌트", use_container_width=True): show_hint(); st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
 
 st.divider()
 
-# --- 메인 체스판 렌더링 ---
+# --- 메인 체스판 ---
 is_white = st.session_state.player_color == chess.WHITE
 ranks = range(7, -1, -1) if is_white else range(8)
 files = range(8) if is_white else range(7, -1, -1)
 file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-# [중요] 비율: (좌표 0.4) + (체스판 8칸 * 1.0)
+# 컬럼 비율: 좌표(0.4) + 체스판(1씩 8개)
 col_ratios = [0.4] + [1] * 8
 
 for rank in ranks:
-    # 좌표와 체스칸을 한 줄에 배치하여 높이 틀어짐 방지
     cols = st.columns(col_ratios)
     
-    # 1. 왼쪽 숫자 좌표
+    # 좌측 좌표
     cols[0].markdown(f"<div class='rank-label'>{rank + 1}</div>", unsafe_allow_html=True)
     
-    # 2. 체스판 8칸
+    # 체스판
     for i, file in enumerate(files):
         sq = chess.square(file, rank)
         piece = st.session_state.board.piece_at(sq)
@@ -274,33 +258,32 @@ for rank in ranks:
         is_dark = (rank + file) % 2 == 0
         btn_type = "primary" if is_dark else "secondary"
         
+        # 버튼 렌더링
         if cols[i+1].button(symbol, key=f"sq_{sq}", type=btn_type):
             handle_click(sq)
             st.rerun()
 
-# 하단 알파벳 좌표
+# 하단 좌표
 footer = st.columns(col_ratios)
 footer[0].write("")
 for i, label in enumerate(file_labels):
     footer[i+1].markdown(f"<div class='file-label'>{label}</div>", unsafe_allow_html=True)
 
-# 하단 상태창
+# 하단 정보창
 st.divider()
-st.info(f"📢 상태: {st.session_state.msg}")
+st.info(f"📢 {st.session_state.msg}")
 
 if st.session_state.board.is_check():
     st.error("🔥 체크!")
-
 if st.session_state.board.is_game_over():
     st.success(f"게임 종료: {st.session_state.board.result()}")
-    if st.button("📊 분석 그래프 보기"):
+    if st.button("📊 분석 그래프"):
         analyze_game()
         st.rerun()
-
 if st.session_state.analysis_data:
     st.line_chart(st.session_state.analysis_data)
 
-# AI 자동 착수
+# AI 턴
 if not st.session_state.board.is_game_over() and st.session_state.board.turn != st.session_state.player_color:
     play_engine_move(skill)
     st.rerun()
