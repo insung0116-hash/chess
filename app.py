@@ -7,36 +7,41 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: '여백 0'이 아니라 '음수 여백(Negative Margin)'으로 강제 병합 ---
+# --- CSS: 좌우 틈새 완전 박멸 (확대 + 그림자 메움) ---
 st.markdown("""
 <style>
-    /* 1. 배경 및 메인 컨테이너 */
+    /* 1. 배경 */
     .stApp { background-color: #e0e0e0; }
     .block-container {
         padding-top: 1rem;
         padding-bottom: 5rem;
-        max-width: 800px; /* 체스판 너비 고정 */
+        max-width: 800px;
     }
 
-    /* 2. [가로 틈 박멸] 컬럼 사이 간격 강제 제거 */
+    /* 2. [필수] 컨테이너들의 오버플로우 허용 (겹친 부분이 잘리지 않게) */
+    div[data-testid="column"], 
+    div[data-testid="stHorizontalBlock"], 
+    div.stButton {
+        overflow: visible !important;
+    }
+
+    /* 3. [세로 틈 제거 유지] 아랫줄을 위로 강제 견인 */
+    div[data-testid="stHorizontalBlock"] {
+        gap: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        margin-bottom: -14px !important; /* 위아래 밀착 유지 */
+    }
+
+    /* 4. [좌우 틈 제거 1단계] 컬럼 간격 삭제 */
     div[data-testid="column"] {
         padding: 0 !important;
         margin: 0 !important;
         flex: 1 1 auto !important;
         min-width: 0 !important;
     }
-
-    /* 3. [세로 틈 박멸] 가로 줄(Row)을 위쪽 줄에 강제로 끼워 넣음 */
-    div[data-testid="stHorizontalBlock"] {
-        gap: 0 !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        /* 중요: 아랫줄을 위로 14px 강제로 끌어올림 */
-        margin-bottom: -14px !important; 
-        overflow: visible !important; /* 겹쳐도 보이게 */
-    }
-
-    /* 4. 버튼 컨테이너 초기화 */
+    
+    /* 5. 버튼 기본 초기화 */
     div.stButton {
         margin: 0 !important;
         padding: 0 !important;
@@ -44,41 +49,42 @@ st.markdown("""
         border: 0 !important;
     }
 
-    /* 5. [필살기] 버튼 크기 과장 및 위치 조정 */
+    /* 6. [좌우 틈 제거 2단계] 버튼 과장 확대 */
     div.stButton > button {
-        /* 너비를 110%로 설정하여 옆 칸의 틈을 물리적으로 덮어버림 */
-        width: 110% !important;
-        /* 높이도 충분히 확보 */
-        min-height: 50px !important; 
+        width: 115% !important;       /* 115%로 대폭 확대 */
+        margin-left: -7.5% !important; /* 중앙 정렬을 위해 좌측으로 당김 */
+        
+        min-height: 50px !important;
         aspect-ratio: 1 / 1 !important;
-        
-        /* 위치 보정: 커진 만큼 왼쪽/위쪽으로 당김 */
-        margin-left: -5% !important;
-        margin-top: -2px !important;
-        
         border: none !important;
         border-radius: 0 !important;
         padding: 0 !important;
         
-        /* 폰트 설정 */
+        /* 폰트 */
         font-size: 3.5vw !important;
         line-height: 1 !important;
         font-weight: bold;
-        
-        /* 렌더링 */
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1; /* 기본 레이어 */
-        
-        /* 텍스트 외곽선 */
         color: black !important;
         text-shadow: 
             1.5px 1.5px 0 #fff, -1.5px 1.5px 0 #fff, 
             1.5px -1.5px 0 #fff, -1.5px -1.5px 0 #fff !important;
+            
+        z-index: 1; /* 기본 레벨 */
+    }
+    
+    /* 7. [좌우 틈 제거 3단계 - 필살기] 같은 색 그림자로 틈새 메우기 (Caulking) */
+    /* 갈색(Primary) 칸은 갈색 그림자로 2px 확장 */
+    div.stButton > button[kind="primary"] {
+        background-color: #b58863 !important;
+        box-shadow: 0 0 0 2px #b58863 !important; 
+    }
+    /* 베이지색(Secondary) 칸은 베이지색 그림자로 2px 확장 */
+    div.stButton > button[kind="secondary"] {
+        background-color: #f0d9b5 !important;
+        box-shadow: 0 0 0 2px #f0d9b5 !important;
     }
 
-    /* PC 화면 폰트 크기 제한 */
+    /* PC 화면 폰트 크기 고정 */
     @media (min-width: 800px) {
         div.stButton > button { 
             font-size: 45px !important; 
@@ -86,35 +92,26 @@ st.markdown("""
         }
     }
 
-    /* 6. 마우스 호버 시 최상단으로 노출 */
+    /* 8. 마우스 호버 효과 */
     div.stButton > button:hover {
         background-color: #ffe066 !important;
-        z-index: 100 !important; /* 겹쳐진 요소들보다 위로 */
-        transform: scale(1.1); /* 더 크게 확대 */
-        box-shadow: 0 0 15px rgba(0,0,0,0.4) !important;
+        box-shadow: 0 0 0 2px #ffe066, 0 0 15px rgba(0,0,0,0.5) !important; /* 호버 시 그림자 색도 변경 */
+        z-index: 100 !important;
+        transform: scale(1.1);
         cursor: pointer;
     }
     
-    /* 7. 선택된 기물 */
+    /* 9. 선택 효과 */
     div.stButton > button:focus {
         background-color: #ffcc00 !important;
-        box-shadow: inset 0 0 0 5px #d9534f !important;
+        box-shadow: inset 0 0 0 4px #d9534f !important;
         z-index: 50 !important;
     }
 
-    /* 8. 체스판 색상 */
-    div.stButton > button[kind="primary"] {
-        background-color: #b58863 !important;
-    }
-    div.stButton > button[kind="secondary"] {
-        background-color: #f0d9b5 !important;
-    }
-
-    /* 9. 좌표 디자인 */
+    /* 10. 좌표 디자인 */
     .rank-label {
         height: 100%; display: flex; align-items: center; justify-content: flex-end;
         font-weight: bold; font-size: 20px; color: #333; padding-right: 15px;
-        /* 좌표도 높이 보정 */
         margin-top: -10px; 
     }
     .file-label {
@@ -122,13 +119,14 @@ st.markdown("""
         padding-top: 10px;
     }
     
-    /* 10. UI 버튼 복구 */
+    /* 11. 외부 UI 정상화 */
     .control-area div.stButton > button, 
     section[data-testid="stSidebar"] div.stButton > button {
         width: 100% !important; margin: 5px 0 !important;
         aspect-ratio: auto !important; font-size: 16px !important;
         background-color: white !important; border: 1px solid #ccc !important;
         box-shadow: none !important; transform: none !important;
+        min-height: auto !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -256,7 +254,7 @@ ranks = range(7, -1, -1) if is_white else range(8)
 files = range(8) if is_white else range(7, -1, -1)
 file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-# 비율: 좌표(0.5) + 체스칸(1.0)
+# 비율
 col_ratios = [0.5] + [1] * 8
 
 for rank in ranks:
