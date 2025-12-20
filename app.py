@@ -45,8 +45,8 @@ st.markdown("""
         border-radius: 0 !important;
         margin: 0 !important; padding: 0 !important;
         
-        /* [수정] 틈새를 없애기 위해 1.1배 확대하여 서로 겹치게 함 */
-        transform: scale(1.1); 
+        /* [수정] 틈새를 없애기 위해 1.2배 확대하여 서로 겹치게 함 */
+        transform: scale(1.2); 
         
         position: relative !important;
         overflow: hidden !important;
@@ -61,11 +61,11 @@ st.markdown("""
     div.stButton > button p {
         position: absolute !important;
         
-        /* [수정] 수직 위치: 약간 아래 (55%) */
-        top: 53% !important;
+        /* [수정] 수직 위치: 약간 아래 (50%) */
+        top: 50% !important;
         
-        /* [수정] 수평 위치: 정중앙(50%)에서 왼쪽으로 이동 -> 45% */
-        left: 48% !important; 
+        /* [수정] 수평 위치: 정중앙(50%)에서 왼쪽으로 이동 -> 50% */
+        left: 50% !important; 
         
         /* 중앙 정렬 기준점 */
         transform: translate(-50%, -50%) !important;
