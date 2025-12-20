@@ -62,10 +62,10 @@ st.markdown("""
         position: absolute !important;
         
         /* [수정] 수직 위치: 약간 아래 (55%) */
-        top: 55% !important;
+        top: 53% !important;
         
         /* [수정] 수평 위치: 정중앙(50%)에서 왼쪽으로 이동 -> 45% */
-        left: 45% !important; 
+        left: 48% !important; 
         
         /* 중앙 정렬 기준점 */
         transform: translate(-50%, -50%) !important;
