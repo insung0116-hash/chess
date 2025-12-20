@@ -86,7 +86,7 @@ st.markdown("""
 
    /* 6. [핵심] 버튼 본체 스타일 */
     div.stButton > button {
-        width: 120% !important;        
+        width: 115% !important;        
         margin-left: -7.5% !important; 
         
         min-height: 50px !important;
