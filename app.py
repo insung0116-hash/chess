@@ -7,109 +7,96 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 사용자님의 '누적 이동' 아이디어 적용 ---
+# --- CSS: '확장 전략' 적용 ---
 st.markdown("""
 <style>
-    /* 1. 기본 배경 */
+    /* 1. 배경 */
     .stApp { background-color: #f4f4f4; }
     
-    /* 2. [핵심] 열(Column)별 누적 이동 (등차수열 적용) */
-    /* Streamlit의 gap이 누적되는 것을 상쇄하기 위해 뒤로 갈수록 더 많이 당깁니다 */
-    
-    /* 2번째 열 (체스판 A열) -> -40px */
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(2) { margin-left: -100px !important; }
-    
-    /* 3번째 열 (체스판 B열) -> -80px */
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(3) { margin-left: -200px !important; }
-    
-    /* 4번째 열 -> -120px */
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(4) { margin-left: -300px !important; }
-    
-    /* 5번째 열 -> -160px */
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(5) { margin-left: -400px !important; }
-    
-    /* 6번째 열 -> -200px */
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(6) { margin-left: -500px !important; }
-    
-    /* 7번째 열 -> -240px */
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(7) { margin-left: -600px !important; }
-    
-    /* 8번째 열 -> -280px */
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(8) { margin-left: -700px !important; }
-    
-    /* 9번째 열 (체스판 H열) -> -320px */
-    div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-of-type(9) { margin-left: -800px !important; }
-
-    /* 3. 공통 레이아웃 정리 */
-    div[data-testid="column"] {
-        padding: 0px !important;
-        min-width: 0px !important;
-    }
+    /* 2. [핵심] 틈새 제거를 위한 컨테이너 설정 */
+    /* 수평 블록의 간격을 0으로 하고 패딩을 없앱니다 */
     div[data-testid="stHorizontalBlock"] {
         gap: 0px !important;
         padding: 0px !important;
-        overflow: visible !important; /* 당겨진 요소가 잘리지 않도록 */
+    }
+    div[data-testid="column"] {
+        padding: 0px !important;
+        margin: 0px !important;
+        min-width: 0px !important;
     }
 
-    /* 4. 체스말 버튼 (2.0배 확대) */
+    /* 3. [핵심 해결책] 버튼 스타일 (확장 & 겹침) */
     section[data-testid="stMain"] div.stButton > button {
-        width: 100% !important;
+        /* 너비를 100%보다 크게 잡아서 옆 칸의 빈틈을 덮어버립니다 */
+        width: 106% !important; 
+        
+        /* 커진 만큼 왼쪽으로 살짝 당겨서 중앙을 맞춥니다 */
+        margin-left: -3% !important; 
+        
+        /* 높이 비율 유지 */
         aspect-ratio: 1 / 1;
         
+        /* 폰트/이모지 확대 */
         font-size: 45px !important; 
-        transform: scale(2.0) !important;
+        transform: scale(1.8) !important;
         transform-origin: center center !important;
         
+        /* 꾸미기 */
         color: #000000 !important;
         text-shadow: 
             1.5px 0 #fff, -1.5px 0 #fff, 0 1.5px #fff, 0 -1.5px #fff,
             1px 1px #fff, -1px -1px #fff, 1px -1px #fff, -1px 1px #fff !important;
             
         padding: 0px !important;
-        margin: 0px !important;
         border: none !important;
-        border-radius: 0px !important;
+        border-radius: 0px !important; /* 모서리를 직각으로 해서 딱 붙게 */
         line-height: 1 !important;
         overflow: visible !important;
         padding-bottom: 8px !important; 
+        
+        /* [중요] 겹쳤을 때 위아래 우선순위 문제 해결 */
+        position: relative; 
+        z-index: 1;
     }
 
-    /* 5. 체스판 색상 */
+    /* 4. 체스판 색상 */
     section[data-testid="stMain"] div.stButton > button[kind="primary"] {
         background-color: #D18B47 !important;
-        border: 0px !important;
     }
     section[data-testid="stMain"] div.stButton > button[kind="secondary"] {
         background-color: #FFCE9E !important;
-        border: 0px !important;
     }
-    section[data-testid="stMain"] div.stButton > button:focus {
+    
+    /* 포커스 및 호버 시 가장 위로 올라오게 */
+    section[data-testid="stMain"] div.stButton > button:focus,
+    section[data-testid="stMain"] div.stButton > button:hover {
         background-color: #f7e034 !important;
-        z-index: 100; /* 겹쳐졌을 때 위로 올라오게 z-index 강화 */
+        z-index: 100 !important; /* 겹친 상태에서도 선택된 건 맨 위로 */
         outline: none !important;
     }
 
-    /* 6. 사이드바 버튼 보호 */
+    /* 5. 사이드바 등 다른 버튼 보호 */
     section[data-testid="stSidebar"] div.stButton > button {
-        width: 100%; height: auto; aspect-ratio: auto;
+        width: 100% !important; 
+        margin-left: 0 !important;
+        height: auto; aspect-ratio: auto;
         font-size: 16px !important; transform: none !important;
         text-shadow: none !important;
-        padding: 0.5rem 1rem; margin-bottom: 10px; border-radius: 8px;
+        padding: 0.5rem 1rem !important; margin-bottom: 10px; border-radius: 8px !important;
     }
 
-    /* 7. 좌표 디자인 */
+    /* 6. 좌표 폰트 */
     .rank-label {
         display: flex; align-items: center; justify-content: center;
         height: 100%; font-weight: 900; font-size: 20px; color: #555;
-        padding-right: 15px; 
+        padding-right: 10px;
     }
-    
     .file-label {
         display: flex; align-items: center; justify-content: center;
         width: 100%; height: 50px; 
         font-weight: 900; font-size: 20px; color: #555;
         margin-top: -5px;
-        transform: translateX(-10px); /* 알파벳 미세 조정 */
+        transform: translateX(-5px); 
     }
 </style>
 """, unsafe_allow_html=True)
@@ -127,7 +114,7 @@ stockfish_path = shutil.which("stockfish")
 if not stockfish_path and os.path.exists("/usr/games/stockfish"):
     stockfish_path = "/usr/games/stockfish"
 
-# --- 로직 함수들 ---
+# --- 로직 ---
 def play_engine_move(skill_level):
     if not stockfish_path or st.session_state.board.is_game_over(): return
     try:
@@ -253,7 +240,7 @@ with main_col:
                 handle_click(sq)
                 st.rerun()
 
-    # 2. 하단 좌표 (CSS가 여기서도 작동하여 자동으로 정렬됩니다)
+    # 2. 하단 좌표
     footer = st.columns(col_ratios, gap="small")
     footer[0].markdown("""
         <div class="stButton" style="visibility:hidden; pointer-events:none;">
