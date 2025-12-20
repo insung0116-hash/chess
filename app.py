@@ -106,11 +106,11 @@ st.markdown("""
     /* 8. 좌표 라벨 */
     .rank-label {
         height: 100%; display: flex; align-items: center; justify-content: flex-end;
-        font-weight: bold; font-size: 20px; color: #333; padding-right: 15px;
+        font-weight: bold; font-size: 20px; color: #333; padding-right: 20px;
     }
     .file-label {
         width: 100%; text-align: center; font-weight: bold; font-size: 20px; color: #333;
-        padding-top: 5px;
+        padding-top: 20px;
     }
     
     /* 9. 사이드바 리셋 */
