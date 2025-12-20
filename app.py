@@ -7,10 +7,10 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 체스말 위치 하향 조정 + 격자 크기 엄격 통일 ---
+# --- CSS: 격자 크기 강제 고정 및 체스말 위치 조정 ---
 st.markdown("""
 <style>
-    /* 1. 배경 및 기본 레이아웃 */
+    /* 1. 배경 및 기본 설정 */
     .stApp { background-color: #e0e0e0; }
     .block-container {
         padding-top: 1rem;
@@ -18,15 +18,14 @@ st.markdown("""
         max-width: 800px;
     }
 
-    /* 2. 격자 구조 강제화 (찌그러짐 방지) */
+    /* 2. [핵심] 컬럼(칸)의 크기가 내용물에 의해 늘어나지 않도록 강제 */
     div[data-testid="column"] {
         padding: 0 !important; margin: 0 !important;
-        min-width: 0 !important; /* 내용물이 커도 컬럼이 늘어나지 않게 강제 */
-        flex: 1 1 0 !important;  /* 모든 컬럼을 수학적으로 동일한 너비로 강제 */
+        min-width: 0 !important; /* 내용물이 커도 컬럼이 늘어나지 않음 */
+        flex: 1 1 0 !important;  /* 모든 컬럼을 1/n로 정확히 분할 */
     }
     div[data-testid="stHorizontalBlock"] {
         gap: 0 !important; padding: 0 !important; margin: 0 !important;
-        align-items: stretch !important;
     }
 
     /* 3. 버튼 컨테이너 초기화 */
@@ -36,43 +35,53 @@ st.markdown("""
         height: auto !important;
     }
 
-    /* 4. [핵심] 버튼 본체 스타일 (정사각형 + 꽉 채우기) */
+    /* 4. [핵심] 버튼 본체 스타일 (물리적 크기 고정) */
     div.stButton > button {
         width: 100% !important;
-        aspect-ratio: 1 / 1 !important; /* 가로세로 비율 1:1 강제 */
-        border: none !important;
-        border-radius: 0 !important;
+        aspect-ratio: 1 / 1 !important; /* 가로세로 1:1 비율 강제 */
+        
+        /* 내용물이 커도 버튼 크기를 바꾸지 못하게 차단 */
+        min-height: 0 !important; 
+        min-width: 0 !important;
+        height: auto !important;
         padding: 0 !important;
         margin: 0 !important;
         
-        /* 시각적 틈새 메우기 (크기는 그대로, 렌더링만 확대) */
+        /* 틈새 메우기 (1.02배 확대) */
         transform: scale(1.02); 
         
         display: flex !important;
-        align-items: center !important;     /* 수직 중앙 정렬 */
-        justify-content: center !important; /* 수평 중앙 정렬 */
+        align-items: center !important;
+        justify-content: center !important;
         
+        /* 오버플로우 허용 (말이 칸 밖으로 살짝 튀어나와도 됨) */
+        overflow: visible !important; 
         z-index: 1;
     }
 
-    /* 5. [수정됨] 체스말(텍스트) 스타일: 위치를 아래로 이동 */
+    /* 5. [체스말 스타일] 위치 하향 조정 */
     div.stButton > button * {
-        font-size: min(7vw, 60px) !important; /* 크기 적절히 조절 */
+        /* 폰트 크기: 화면 너비에 따라 반응형으로 조절 */
+        font-size: min(7.5vw, 65px) !important; 
         line-height: 1 !important; 
         font-weight: 400 !important; 
         color: black !important;
         
-        /* 텍스트 외곽선 (가독성) */
+        /* 텍스트 외곽선 */
         text-shadow: 
             1px 1px 0 #fff, -1px 1px 0 #fff, 
             1px -1px 0 #fff, -1px -1px 0 #fff !important;
             
-        /* [핵심 요청 사항] 위치를 아래로 내림 */
-        position: relative;
-        top: 8% !important; /* 버튼 높이의 8%만큼 아래로 이동 */
+        /* [요청 반영] 위치를 아래로 내리기 */
+        position: relative !important;
+        top: 8% !important;  /* 8% 정도 아래로 이동 */
+        left: 0 !important;
+        
+        /* 마우스 이벤트가 버튼을 통과하지 않게 */
+        pointer-events: none; 
     }
 
-    /* 6. 색상 및 스타일 */
+    /* 6. 색상 및 외곽선 */
     div.stButton > button[kind="primary"] {
         background-color: #b58863 !important;
         outline: 1px solid #b58863 !important;
@@ -87,10 +96,11 @@ st.markdown("""
         background-color: #ffe066 !important;
         outline: 2px solid #ffe066 !important;
         z-index: 100 !important;
+        transform: scale(1.1) !important;
         cursor: pointer;
     }
 
-    /* 8. 좌표 스타일 */
+    /* 8. 좌표 라벨 */
     .rank-label {
         height: 100%; display: flex; align-items: center; justify-content: flex-end;
         font-weight: bold; font-size: 18px; color: #333; padding-right: 15px;
@@ -100,17 +110,19 @@ st.markdown("""
         padding-top: 5px;
     }
     
-    /* 9. 사이드바 버튼 (영향 안 받게 초기화) */
+    /* 9. 사이드바 버튼 (영향 안 받게 리셋) */
     section[data-testid="stSidebar"] div.stButton > button {
         width: 100% !important; margin: 5px 0 !important;
         aspect-ratio: auto !important; 
         background-color: white !important; border: 1px solid #ccc !important;
         box-shadow: none !important; transform: none !important;
         outline: none !important; padding: 0.5rem !important;
+        overflow: hidden !important; /* 사이드바 버튼은 넘치면 자름 */
     }
     section[data-testid="stSidebar"] div.stButton > button * {
         font-size: 16px !important; line-height: 1.5 !important; 
         top: 0 !important; /* 사이드바 글자는 정위치 */
+        pointer-events: auto;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -206,7 +218,6 @@ def analyze_game():
 # ================= UI 레이아웃 =================
 st.title("♟️ Classic Chess")
 
-# 사이드바 설정
 with st.sidebar:
     st.header("⚙️ 게임 설정")
     color_opt = st.radio("진영 선택", ["White (선공)", "Black (후공)"])
@@ -236,6 +247,7 @@ ranks = range(7, -1, -1) if is_white else range(8)
 files = range(8) if is_white else range(7, -1, -1)
 file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
+# 좌표 0.5, 체스판 1.0 비율
 col_ratios = [0.5] + [1] * 8
 
 for rank in ranks:
