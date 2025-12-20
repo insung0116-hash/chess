@@ -50,7 +50,7 @@ st.markdown("""
         margin: 0 !important; padding: 0 !important;
         
         /* 틈새 제거를 위해 살짝 확대하여 겹치게 함 */
-        transform: scale(1.1); 
+        transform: scale(1.01); 
         
         position: relative !important;
         overflow: hidden !important;
