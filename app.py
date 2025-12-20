@@ -7,31 +7,33 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: [최후의 수단] 음수 마진을 이용한 강제 겹침 ---
+# --- CSS: [핵심] Streamlit 그리드 시스템 강제 무력화 ---
 st.markdown("""
 <style>
-    /* 1. 배경 */
+    /* 1. 기본 배경 및 변수 초기화 */
     .stApp { background-color: #f4f4f4; }
-    
-    /* 2. Streamlit 레이아웃 변수 강제 초기화 (gap 관련) */
-    :root {
-        --column-gap: 0px !important;
-    }
+    :root { --column-gap: 0px !important; }
 
-    /* 3. 수평/수직 컨테이너 틈새 제거 및 오버플로우 해제 */
-    div[data-testid="stHorizontalBlock"], div[data-testid="column"] {
-        gap: 0px !important;
+    /* 2. [가로 해결] 컬럼(Column) 간격 강제 제거 */
+    /* Streamlit이 계산한 width를 무시하고 flex-grow로 꽉 채웁니다 */
+    div[data-testid="column"] {
         padding: 0px !important;
         margin: 0px !important;
-        overflow: visible !important; /* 겹친 부분이 잘리지 않게 필수 */
+        gap: 0px !important;
+        min-width: 0px !important;
+        flex: 1 1 auto !important; /* 강제로 늘려서 빈 공간 없앰 */
     }
 
-    /* 4. 세로 줄(Row) 간격 제거 (위로 당기기) */
+    /* 3. [가로 해결] 가로 줄(Row) 컨테이너 설정 */
     div[data-testid="stHorizontalBlock"] {
-        margin-bottom: -18px !important; /* 줄 사이 틈 제거 */
+        gap: 0px !important;
+        padding: 0px !important;
+        margin-bottom: -18px !important; /* 세로 줄 간격 당기기 */
+        display: flex !important; /* Flexbox 강제 적용 */
+        justify-content: center !important; /* 중앙 정렬 */
     }
-    
-    /* 5. 버튼 감싸는 컨테이너 초기화 */
+
+    /* 4. 버튼(체스판 칸) 스타일 */
     div.stButton {
         padding: 0px !important;
         margin: 0px !important;
@@ -39,49 +41,34 @@ st.markdown("""
         border: 0px !important;
     }
     
-    /* 6. [핵심] 버튼 본체: 옆 버튼과 물리적으로 겹치게 만들기 */
     div.stButton > button {
-        /* 너비를 120%로 설정 (본인 구역보다 훨씬 크게) */
-        width: 120% !important;
+        /* 너비 100%로 꽉 채움 (Flex가 이미 붙여놓음) */
+        width: 100% !important;
+        aspect-ratio: 1 / 1 !important; /* 정사각형 유지 */
         
-        /* 왼쪽으로 -10%, 오른쪽으로 -10% 당겨서 양옆 버튼 위로 확장 */
-        margin-left: -10% !important;
-        margin-right: -10% !important;
-        
-        /* 높이 정사각형 고정 */
-        aspect-ratio: 1 / 1 !important;
-        
-        /* 폰트 및 스타일 */
-        font-size: 38px !important;
+        /* 폰트 및 디자인 */
+        font-size: 3vw !important; /* 화면 크기에 따라 글자 크기 조절 */
         line-height: 1 !important;
         padding: 0px !important;
+        margin: 0px !important;
         border: none !important;
         border-radius: 0px !important;
-        
-        /* 흰색 선 방지용 그림자 (내부 틈새 메꿈) */
-        box-shadow: 0 0 0 1px rgba(0,0,0,0) !important;
-        
-        /* 겹침 순서 기본값 */
-        position: relative;
-        z-index: 1;
         
         /* 텍스트 스타일 */
         color: #000000 !important;
         text-shadow: 
-            1.5px 0 #fff, -1.5px 0 #fff, 0 1.5px #fff, 0 -1.5px #fff,
-            1px 1px #fff, -1px -1px #fff, 1px -1px #fff, -1px 1px #fff !important;
+            1px 0 #fff, -1px 0 #fff, 0 1px #fff, 0 -1px #fff !important;
     }
 
-    /* 7. 마우스 호버 효과 (선택된 칸이 가장 위로 올라오게) */
-    div.stButton > button:hover, div.stButton > button:focus {
+    /* 5. 마우스 호버 효과 */
+    div.stButton > button:hover {
         background-color: #f7e034 !important;
-        z-index: 9999 !important; /* 무조건 최상단 */
-        transform: scale(1.1); /* 강조 */
-        box-shadow: 0 0 15px rgba(0,0,0,0.6) !important;
-        outline: none !important;
+        transform: scale(1.02);
+        z-index: 10;
+        position: relative;
     }
 
-    /* 8. 체스판 색상 설정 */
+    /* 6. 체스판 색상 */
     div.stButton > button[kind="primary"] {
         background-color: #D18B47 !important;
     }
@@ -89,26 +76,23 @@ st.markdown("""
         background-color: #FFCE9E !important;
     }
 
-    /* 9. 사이드바 등 외부 버튼 보호 */
-    section[data-testid="stSidebar"] div.stButton > button,
-    div[data-testid="stVerticalBlock"] > div > button {
-        width: 100% !important; margin: 0 !important; margin-bottom: 10px !important;
-        height: auto !important; aspect-ratio: auto !important;
-        border-radius: 8px !important; font-size: 16px !important;
-        text-shadow: none !important; padding: 0.5rem 1rem !important;
-        margin-left: 0 !important; margin-right: 0 !important;
-    }
-
-    /* 10. 좌표 라벨 위치 잡기 */
+    /* 7. 좌표 폰트 스타일 */
     .rank-label {
-        font-weight: 900; font-size: 20px; color: #555;
+        font-weight: bold; font-size: 20px; color: #555;
         display: flex; align-items: center; justify-content: center; height: 100%;
-        margin-right: -10px; margin-top: -8px; z-index: 0;
+        margin-top: -5px;
     }
     .file-label {
-        font-weight: 900; font-size: 20px; color: #555;
+        font-weight: bold; font-size: 20px; color: #555;
         display: flex; justify-content: center; width: 100%;
-        padding-top: 15px; z-index: 0;
+    }
+
+    /* 8. 사이드바 등 외부 버튼은 정상적으로 */
+    section[data-testid="stSidebar"] div.stButton > button,
+    div[data-testid="stVerticalBlock"] > div > button {
+        width: auto !important; aspect-ratio: auto !important;
+        border-radius: 5px !important; font-size: 16px !important;
+        padding: 0.5rem 1rem !important; margin-bottom: 10px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -134,7 +118,7 @@ def play_engine_move(skill_level):
         engine.configure({"Skill Level": skill_level})
         result = engine.play(st.session_state.board, chess.engine.Limit(time=0.2))
         st.session_state.board.push(result.move)
-        st.session_state.redo_stack = [] 
+        st.session_state.redo_stack = []
         engine.quit()
         st.session_state.msg = "당신의 차례입니다."
     except: pass
@@ -167,7 +151,7 @@ def handle_click(sq):
             if m in st.session_state.board.legal_moves:
                 st.session_state.board.push(m)
                 st.session_state.selected_square = None
-                st.session_state.redo_stack = [] 
+                st.session_state.redo_stack = []
                 st.session_state.msg = "착수 완료"
             else:
                 p = st.session_state.board.piece_at(sq)
@@ -233,14 +217,16 @@ with main_col:
     files = range(8) if is_white else range(7, -1, -1)
     file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-    col_ratios = [0.7] + [2] * 8
+    # 비율 조정: 왼쪽 좌표용(0.5) + 체스판 8칸(1.0씩)
+    # 비율을 1:1:1로 주면 Flexbox가 균등하게 배분하려 노력합니다.
+    col_ratios = [0.5] + [1] * 8
 
     # --- 1. 체스판 루프 ---
     for rank in ranks:
-        # gap="small"을 유지하되 CSS로 덮어씁니다
-        cols = st.columns(col_ratios, gap="small")
+        # gap="small" 조차 제거하고 CSS로 제어합니다. (여기서 gap 인자 생략 시 기본값인데 CSS가 덮음)
+        cols = st.columns(col_ratios)
         
-        # 숫자 좌표
+        # 숫자 좌표 (왼쪽)
         cols[0].markdown(f"<div class='rank-label'>{rank + 1}</div>", unsafe_allow_html=True)
         
         for i, file in enumerate(files):
@@ -257,7 +243,7 @@ with main_col:
                 st.rerun()
 
     # --- 2. 하단 좌표 ---
-    footer = st.columns(col_ratios, gap="small")
+    footer = st.columns(col_ratios)
     footer[0].write("")
     for i, label in enumerate(file_labels):
         footer[i+1].markdown(f"<div class='file-label'>{label}</div>", unsafe_allow_html=True)
