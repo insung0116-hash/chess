@@ -7,65 +7,75 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: Absolute Positioning (공중 부양) 기법 적용 ---
+# --- CSS: 크기 확대 / 정렬 수정 / 틈새 제거 ---
 st.markdown("""
 <style>
-    /* 1. 기본 배경 */
+    /* 1. 배경 및 전체 레이아웃 크기 확대 */
     .stApp { background-color: #e0e0e0; }
     .block-container {
         padding-top: 1rem;
         padding-bottom: 5rem;
-        max-width: 800px;
+        /* [수정] 체스판 크기 대폭 확대 (기존 800px -> 1200px) */
+        max-width: 1200px !important; 
     }
 
-    /* 2. 컬럼(칸) 강제 균등 분할 */
+    /* 2. 컬럼(칸) 간격 완벽 제거 */
     div[data-testid="column"] {
         padding: 0 !important; margin: 0 !important;
-        flex: 1 1 0px !important; /* 너비를 0에서 시작해서 균등 배분 */
+        flex: 1 1 0px !important; 
         min-width: 0 !important;
     }
+    /* [수정] 수평 블록 간격 0 강제 */
     div[data-testid="stHorizontalBlock"] {
-        gap: 0 !important;
+        gap: 0 !important; 
     }
-
+    
     /* 3. 버튼 컨테이너 */
     div.stButton {
         width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
+        margin: 0 !important; padding: 0 !important;
+        border: 0 !important;
     }
 
-    /* 4. [핵심] 버튼 본체 (틀) */
+    /* 4. 버튼 본체 (네모 칸) */
     div.stButton > button {
         width: 100% !important;
-        aspect-ratio: 1 / 1 !important; /* 무조건 1:1 정사각형 */
+        aspect-ratio: 1 / 1 !important;
         border: none !important;
         border-radius: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
+        margin: 0 !important; padding: 0 !important;
         
-        /* 틈새 제거 */
-        transform: scale(1.02);
+        /* [수정] 틈새를 없애기 위해 1.5배 확대하여 서로 겹치게 함 */
+        transform: scale(1.5); 
         
-        position: relative !important; /* 내부 요소의 기준점이 됨 */
-        overflow: hidden !important;   /* 튀어나오면 자름 */
+        position: relative !important;
+        overflow: hidden !important;
         z-index: 1;
+        
+        /* 그림자 제거 */
+        box-shadow: none !important;
     }
 
-    /* 5. [핵심 해결책] 체스말 (내용물) */
-    /* 버튼 안의 텍스트를 담는 div/p 태그를 찾아서 공중에 띄움 */
+    /* 5. 체스말 (공중 부양 & 위치 수정) */
     div.stButton > button div,
     div.stButton > button p {
-        position: absolute !important; /* 문서 흐름에서 제거 (크기에 영향 안 줌) */
-        top: 55% !important;           /* 위에서 55% 지점 (약간 아래로) */
-        left: 50% !important;          /* 좌우 중앙 */
-        transform: translate(-50%, -50%) !important; /* 정확한 중앙 정렬 보정 */
+        position: absolute !important;
+        
+        /* [수정] 수직 위치: 약간 아래 (55%) */
+        top: 55% !important;
+        
+        /* [수정] 수평 위치: 정중앙(50%)에서 왼쪽으로 이동 -> 45% */
+        left: 45% !important; 
+        
+        /* 중앙 정렬 기준점 */
+        transform: translate(-50%, -50%) !important;
         
         width: 100% !important;
         text-align: center !important;
         
-        /* 폰트 설정 */
-        font-size: min(7vw, 55px) !important;
+        /* [수정] 칸이 커진 만큼 폰트도 더 크게 (7vw -> 8vw) */
+        font-size: min(8vw, 75px) !important;
+        
         line-height: 1 !important;
         font-weight: 400 !important;
         color: black !important;
@@ -74,10 +84,10 @@ st.markdown("""
             1px 1px 0 #fff, -1px 1px 0 #fff, 
             1px -1px 0 #fff, -1px -1px 0 #fff !important;
             
-        pointer-events: none; /* 클릭은 버튼이 받도록 패스 */
+        pointer-events: none;
     }
 
-    /* 6. 색상 */
+    /* 6. 칸 색상 */
     div.stButton > button[kind="primary"] {
         background-color: #b58863 !important;
     }
@@ -85,33 +95,34 @@ st.markdown("""
         background-color: #f0d9b5 !important;
     }
 
-    /* 7. 호버 */
+    /* 7. 호버 효과 */
     div.stButton > button:hover {
         background-color: #ffe066 !important;
-        filter: brightness(1.1);
+        /* 호버 시 앞으로 튀어나오게 하여 가려짐 방지 */
+        z-index: 10 !important; 
         cursor: pointer;
-        z-index: 10;
     }
 
     /* 8. 좌표 라벨 */
     .rank-label {
         height: 100%; display: flex; align-items: center; justify-content: flex-end;
-        font-weight: bold; font-size: 18px; color: #333; padding-right: 15px;
+        font-weight: bold; font-size: 20px; color: #333; padding-right: 15px;
     }
     .file-label {
-        width: 100%; text-align: center; font-weight: bold; font-size: 18px; color: #333;
+        width: 100%; text-align: center; font-weight: bold; font-size: 20px; color: #333;
         padding-top: 5px;
     }
     
-    /* 9. 사이드바 버튼 리셋 */
+    /* 9. 사이드바 리셋 */
     section[data-testid="stSidebar"] div.stButton > button {
         aspect-ratio: auto !important;
         background-color: white !important;
         border: 1px solid #ccc !important;
         margin: 5px 0 !important;
+        transform: none !important; /* 사이드바 버튼은 확대 안 함 */
     }
     section[data-testid="stSidebar"] div.stButton > button * {
-        position: static !important; /* 사이드바는 공중부양 해제 */
+        position: static !important;
         transform: none !important;
         font-size: 16px !important;
     }
