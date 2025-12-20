@@ -51,7 +51,7 @@ st.markdown("""
 
     /* 6. [좌우 틈 제거 2단계] 버튼 과장 확대 */
     div.stButton > button {
-        width: 125% !important;       /* 115%로 대폭 확대 */
+        width: 130% !important;       /* 115%로 대폭 확대 */
         margin-left: -7.5% !important; /* 중앙 정렬을 위해 좌측으로 당김 */
         
         min-height: 50px !important;
