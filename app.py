@@ -7,10 +7,10 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 격자 유지 + 시각적 확대 + 폰트 두께 조절 ---
+# --- CSS: 체스말 위치 하향 조정 + 격자 크기 엄격 통일 ---
 st.markdown("""
 <style>
-    /* 1. 기본 배경 */
+    /* 1. 배경 및 기본 레이아웃 */
     .stApp { background-color: #e0e0e0; }
     .block-container {
         padding-top: 1rem;
@@ -18,12 +18,15 @@ st.markdown("""
         max-width: 800px;
     }
 
-    /* 2. 컬럼 및 로우 간격 제거 */
+    /* 2. 격자 구조 강제화 (찌그러짐 방지) */
     div[data-testid="column"] {
         padding: 0 !important; margin: 0 !important;
+        min-width: 0 !important; /* 내용물이 커도 컬럼이 늘어나지 않게 강제 */
+        flex: 1 1 0 !important;  /* 모든 컬럼을 수학적으로 동일한 너비로 강제 */
     }
     div[data-testid="stHorizontalBlock"] {
         gap: 0 !important; padding: 0 !important; margin: 0 !important;
+        align-items: stretch !important;
     }
 
     /* 3. 버튼 컨테이너 초기화 */
@@ -33,44 +36,43 @@ st.markdown("""
         height: auto !important;
     }
 
-    /* 4. 버튼 본체 스타일 (격자 유지 + 틈새 메우기) */
+    /* 4. [핵심] 버튼 본체 스타일 (정사각형 + 꽉 채우기) */
     div.stButton > button {
         width: 100% !important;
-        aspect-ratio: 1 / 1 !important;
+        aspect-ratio: 1 / 1 !important; /* 가로세로 비율 1:1 강제 */
         border: none !important;
         border-radius: 0 !important;
         padding: 0 !important;
         margin: 0 !important;
         
-        /* 시각적 확대로 틈새 커버 */
-        transform: scale(1.03); 
+        /* 시각적 틈새 메우기 (크기는 그대로, 렌더링만 확대) */
+        transform: scale(1.02); 
         
         display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
+        align-items: center !important;     /* 수직 중앙 정렬 */
+        justify-content: center !important; /* 수평 중앙 정렬 */
         
         z-index: 1;
     }
 
-    /* 5. [수정] 체스말(텍스트) 스타일: 두께 줄임 */
+    /* 5. [수정됨] 체스말(텍스트) 스타일: 위치를 아래로 이동 */
     div.stButton > button * {
-        font-size: min(8vw, 65px) !important; 
-        line-height: 0 !important; 
-        
-        /* [요청 반영] 폰트 두께를 900(Ultra Bold)에서 400(Normal)으로 변경 */
+        font-size: min(7vw, 60px) !important; /* 크기 적절히 조절 */
+        line-height: 1 !important; 
         font-weight: 400 !important; 
         color: black !important;
         
-        /* 외곽선도 조금 더 얇게 조정하여 둔탁함 제거 */
+        /* 텍스트 외곽선 (가독성) */
         text-shadow: 
             1px 1px 0 #fff, -1px 1px 0 #fff, 
             1px -1px 0 #fff, -1px -1px 0 #fff !important;
             
+        /* [핵심 요청 사항] 위치를 아래로 내림 */
         position: relative;
-        top: -3px; 
+        top: 8% !important; /* 버튼 높이의 8%만큼 아래로 이동 */
     }
 
-    /* 6. 색상 및 줄눈 효과 */
+    /* 6. 색상 및 스타일 */
     div.stButton > button[kind="primary"] {
         background-color: #b58863 !important;
         outline: 1px solid #b58863 !important;
@@ -80,42 +82,35 @@ st.markdown("""
         outline: 1px solid #f0d9b5 !important;
     }
 
-    /* 7. 호버 및 포커스 */
+    /* 7. 호버 효과 */
     div.stButton > button:hover {
         background-color: #ffe066 !important;
         outline: 2px solid #ffe066 !important;
         z-index: 100 !important;
         cursor: pointer;
-        transform: scale(1.1) !important;
-    }
-    div.stButton > button:focus {
-        background-color: #ffcc00 !important;
-        box-shadow: inset 0 0 0 4px #d9534f !important;
-        z-index: 50 !important;
     }
 
     /* 8. 좌표 스타일 */
     .rank-label {
         height: 100%; display: flex; align-items: center; justify-content: flex-end;
-        font-weight: bold; font-size: 20px; color: #333; padding-right: 15px;
+        font-weight: bold; font-size: 18px; color: #333; padding-right: 15px;
     }
     .file-label {
-        width: 100%; text-align: center; font-weight: bold; font-size: 20px; color: #333;
-        padding-top: 10px;
+        width: 100%; text-align: center; font-weight: bold; font-size: 18px; color: #333;
+        padding-top: 5px;
     }
     
-    /* 9. 사이드바 버튼 스타일 */
+    /* 9. 사이드바 버튼 (영향 안 받게 초기화) */
     section[data-testid="stSidebar"] div.stButton > button {
         width: 100% !important; margin: 5px 0 !important;
         aspect-ratio: auto !important; 
         background-color: white !important; border: 1px solid #ccc !important;
         box-shadow: none !important; transform: none !important;
-        outline: none !important;
-        padding: 0.5rem !important;
+        outline: none !important; padding: 0.5rem !important;
     }
     section[data-testid="stSidebar"] div.stButton > button * {
-        font-size: 16px !important; line-height: 1.5 !important; top: 0; font-weight: normal !important;
-        text-shadow: none !important;
+        font-size: 16px !important; line-height: 1.5 !important; 
+        top: 0 !important; /* 사이드바 글자는 정위치 */
     }
 </style>
 """, unsafe_allow_html=True)
@@ -211,36 +206,22 @@ def analyze_game():
 # ================= UI 레이아웃 =================
 st.title("♟️ Classic Chess")
 
-# [수정됨] 모든 설정 및 컨트롤 버튼을 사이드바로 이동
+# 사이드바 설정
 with st.sidebar:
     st.header("⚙️ 게임 설정")
-    
-    # 진영 선택
     color_opt = st.radio("진영 선택", ["White (선공)", "Black (후공)"])
     new_color = chess.WHITE if "White" in color_opt else chess.BLACK
-    
-    # 난이도
     skill = st.slider("🤖 AI 레벨", 0, 20, 3)
-    
     st.divider()
     
-    # 게임 제어 버튼들 (사이드바에 통합)
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("⬅️ 무르기", use_container_width=True): 
-            undo_move()
-            st.rerun()
+        if st.button("⬅️ 무르기", use_container_width=True): undo_move(); st.rerun()
     with col2:
-        if st.button("➡️ 되살리기", use_container_width=True): 
-            redo_move()
-            st.rerun()
+        if st.button("➡️ 되살리기", use_container_width=True): redo_move(); st.rerun()
             
-    if st.button("💡 힌트 보기", use_container_width=True): 
-        show_hint()
-        st.rerun()
-        
+    if st.button("💡 힌트 보기", use_container_width=True): show_hint(); st.rerun()
     st.divider()
-    
     if st.button("🔄 게임 재시작", type="primary", use_container_width=True):
         st.session_state.board = chess.Board()
         st.session_state.selected_square = None
@@ -255,7 +236,6 @@ ranks = range(7, -1, -1) if is_white else range(8)
 files = range(8) if is_white else range(7, -1, -1)
 file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-# 비율 설정
 col_ratios = [0.5] + [1] * 8
 
 for rank in ranks:
