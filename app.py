@@ -39,14 +39,14 @@ st.markdown("""
 
     /* 4. 버튼 본체 (네모 칸) */
     div.stButton > button {
-        width: 100% !important;
+        width: 200% !important;
         aspect-ratio: 1 / 1 !important;
         border: none !important;
         border-radius: 0 !important;
         margin: 0 !important; padding: 0 !important;
         
-        /* [수정] 틈새를 없애기 위해 2배 확대하여 서로 겹치게 함 */
-        transform: scale(2); 
+        /* [수정] 틈새를 없애기 위해 1.5배 확대하여 서로 겹치게 함 */
+        transform: scale(1.5); 
         
         position: relative !important;
         overflow: hidden !important;
