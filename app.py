@@ -7,101 +7,101 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 버튼을 강제로 키워서 틈새를 덮어버리는 스타일 ---
+# --- CSS: 가장 강력한 강제 적용 모드 ---
 st.markdown("""
 <style>
     /* 1. 배경 */
     .stApp { background-color: #f4f4f4; }
-    
-    /* 2. 컬럼 컨테이너 간격 강제 제거 */
-    div[data-testid="stHorizontalBlock"] {
+
+    /* 2. [초강력] 수평 블록의 갭을 강제로 없앰 (ID가 바뀌어도 적용되도록 속성 선택자 사용) */
+    div[data-testid*="HorizontalBlock"] {
         gap: 0px !important;
         padding: 0px !important;
-        overflow: visible !important; /* 겹친 부분이 잘리지 않게 */
+        overflow: visible !important;
     }
-
-    /* 3. 개별 컬럼 패딩 제거 */
-    div[data-testid="column"] {
+    
+    /* 3. [초강력] 컬럼(열)의 여백을 0으로 만들고 너비 강제 조정 */
+    div[data-testid*="column"] {
         padding: 0px !important;
         margin: 0px !important;
         min-width: 0px !important;
+        overflow: visible !important; /* 버튼이 삐져나가도 보이게 설정 */
     }
-    
-    /* 4. [핵심] 버튼 스타일 (물리적 겹침 전략) */
-    section[data-testid="stMain"] div.stButton > button {
-        /* 너비를 110%로 설정하여 원래 칸보다 더 넓게 만듭니다 (틈새 원천 봉쇄) */
-        width: 110% !important;
+
+    /* 4. 버튼 감싸는 div (stButton) 여백 제거 */
+    div.stButton {
+        padding: 0px !important;
+        margin: 0px !important;
+        width: 100% !important;
+        border: 0px !important;
+    }
+
+    /* 5. [핵심 해결책] 버튼 본체 스타일 (좌우로 찢어서 틈새 메꾸기) */
+    div.stButton > button {
+        width: 100% !important;
+        aspect-ratio: 1 / 1; /* 정사각형 유지 */
         
-        /* 양옆으로 5%씩 삐져나가게 하여 옆 칸과 겹치게 만듭니다 */
-        margin-left: -5% !important;
-        margin-right: -5% !important;
+        /* [중요] 가로로 120% 늘려서 양옆 흰색 선을 덮어버립니다 */
+        transform: scaleX(1.25) scaleY(1.0) !important; 
         
-        /* 높이 비율 유지 */
-        aspect-ratio: 1 / 1;
+        font-size: 40px !important; /* 아이콘 크기 */
         
-        /* 폰트/이모지 설정 */
-        font-size: 45px !important; 
-        transform: scale(1.8) !important;
-        transform-origin: center center !important;
+        /* 겹침 문제 해결: 삐져나온 부분이 다른 버튼 위에 보이도록 */
+        position: relative !important;
+        z-index: 1;
         
-        /* 색상 및 테두리 */
+        padding: 0px !important;
+        margin: 0px !important;
+        border: none !important;
+        border-radius: 0px !important;
+        line-height: 1 !important;
+        
         color: #000000 !important;
         text-shadow: 
             1.5px 0 #fff, -1.5px 0 #fff, 0 1.5px #fff, 0 -1.5px #fff,
             1px 1px #fff, -1px -1px #fff, 1px -1px #fff, -1px 1px #fff !important;
-            
-        padding: 0px !important;
-        border: none !important;
-        border-radius: 0px !important; /* 완전 사각형 */
-        line-height: 1 !important;
-        
-        /* 겹침 처리 */
-        position: relative;
-        z-index: 1;
     }
 
-    /* 5. 칸 색상 */
-    section[data-testid="stMain"] div.stButton > button[kind="primary"] {
+    /* 6. 마우스 올렸을 때 (가장 위로 올라오게) */
+    div.stButton > button:hover, div.stButton > button:focus, div.stButton > button:active {
+        background-color: #f7e034 !important;
+        z-index: 9999 !important; /* 무조건 최상단 */
+        transform: scale(1.1) !important; /* 클릭하려 하면 살짝 전체 확대 */
+        outline: none !important;
+        box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    }
+
+    /* 7. 체스판 색상 */
+    div.stButton > button[kind="primary"] {
         background-color: #D18B47 !important;
     }
-    section[data-testid="stMain"] div.stButton > button[kind="secondary"] {
+    div.stButton > button[kind="secondary"] {
         background-color: #FFCE9E !important;
     }
-    
-    /* 6. 마우스 오버/포커스 시 맨 위로 */
-    section[data-testid="stMain"] div.stButton > button:hover,
-    section[data-testid="stMain"] div.stButton > button:focus {
-        background-color: #f7e034 !important;
-        z-index: 100 !important; /* 겹친 상태에서 선택된 놈을 앞으로 끄집어냄 */
-        outline: none !important;
-        box-shadow: 0 0 10px rgba(0,0,0,0.5); /* 선택된 느낌 강조 */
-    }
 
-    /* 7. 사이드바 버튼 보호 (체스판 스타일 영향 안 받게) */
+    /* 8. 사이드바 보호 (사이드바 버튼은 정상적으로 보이게) */
     section[data-testid="stSidebar"] div.stButton > button {
-        width: 100% !important; margin: 0 !important;
-        height: auto; aspect-ratio: auto;
-        font-size: 16px !important; transform: none !important;
-        text-shadow: none !important;
-        padding: 0.5rem 1rem !important; margin-bottom: 10px !important; 
+        transform: none !important; /* 변형 해제 */
+        width: 100% !important;
         border-radius: 8px !important;
-    }
-
-    /* 8. 좌표 폰트 및 정렬 */
-    .rank-label {
-        display: flex; align-items: center; justify-content: center;
-        height: 100%; font-weight: 900; font-size: 20px; color: #555;
-        padding-right: 15px; 
+        margin-bottom: 10px !important;
+        padding: 0.5rem 1rem !important;
+        font-size: 16px !important;
+        text-shadow: none !important;
     }
     
-    .file-label {
-        display: flex; align-items: center; justify-content: center;
-        width: 100%; height: 50px; 
-        font-weight: 900; font-size: 20px; color: #555;
-        margin-top: -5px;
-        /* 좌표도 살짝 왼쪽으로 */
-        transform: translateX(-10px); 
+    /* 9. 좌표 폰트 스타일 */
+    .rank-label { 
+        font-weight: 900; font-size: 20px; color: #555; 
+        display: flex; align-items: center; justify-content: center; height: 100%;
+        margin-right: -10px; /* 숫자 좌표도 체스판 쪽으로 밀기 */
     }
+    .file-label { 
+        font-weight: 900; font-size: 20px; color: #555; 
+        display: flex; justify-content: center; 
+        margin-top: -10px;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -225,12 +225,14 @@ with main_col:
     files = range(8) if is_white else range(7, -1, -1)
     file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-    col_ratios = [0.7] + [2] * 8
+    col_ratios = [0.7] + [2] * 8 # 비율은 유지
 
-    # 1. 체스판
+    # 1. 체스판 그리기
     for rank in ranks:
-        # gap="small" 유지 (CSS로 덮어씀)
+        # gap="small" 옵션이 있어도 CSS가 !important로 무시해버립니다.
         cols = st.columns(col_ratios, gap="small")
+        
+        # 숫자 좌표
         cols[0].markdown(f"<div class='rank-label'>{rank + 1}</div>", unsafe_allow_html=True)
         
         for i, file in enumerate(files):
@@ -241,19 +243,14 @@ with main_col:
             is_dark = (rank + file) % 2 == 0
             btn_type = "primary" if is_dark else "secondary"
             
-            # CSS가 버튼을 110%로 키워서 옆으로 밀어버리므로 틈이 보일 수가 없습니다.
+            # 버튼 생성
             if cols[i+1].button(symbol, key=f"sq_{sq}", type=btn_type):
                 handle_click(sq)
                 st.rerun()
 
     # 2. 하단 좌표
     footer = st.columns(col_ratios, gap="small")
-    footer[0].markdown("""
-        <div class="stButton" style="visibility:hidden; pointer-events:none;">
-            <button style="font-size:45px !important; transform: scale(1.8); padding:0 !important; border:none !important;">X</button>
-        </div>
-        """, unsafe_allow_html=True)
-    
+    footer[0].markdown("<div></div>", unsafe_allow_html=True) # 빈칸
     for i, label in enumerate(file_labels):
         footer[i+1].markdown(f"<div class='file-label'>{label}</div>", unsafe_allow_html=True)
 
