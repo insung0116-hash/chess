@@ -45,7 +45,7 @@ st.markdown("""
 
     /* 6. [핵심 수정] 버튼 스타일 및 폰트 크기 확대 */
     div.stButton > button {
-        width: 115% !important;        /* 틈새 메우기용 너비 확대 */
+        width: 200% !important;        /* 틈새 메우기용 너비 확대 */
         margin-left: -7.5% !important; /* 중앙 정렬 보정 */
         
         min-height: 50px !important;
