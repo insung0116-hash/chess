@@ -7,7 +7,7 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 격자 크기 엄격 통제 (내용물 영향 100% 차단) ---
+# --- CSS: 격자 붕괴 방지 및 폰트 유동적 조절 ---
 st.markdown("""
 <style>
     /* 1. 배경 및 기본 설정 */
@@ -15,56 +15,60 @@ st.markdown("""
     .block-container {
         padding-top: 1rem;
         padding-bottom: 5rem;
-        max-width: 800px;
+        max-width: 850px; /* 전체 폭 제한 */
     }
 
-    /* 2. [핵심 수정] 컬럼(칸) 스타일: Flex-basis를 0으로 강제 */
+    /* 2. 컬럼(칸) 설정: 내용물이 커도 절대 늘어나지 않음 */
     div[data-testid="column"] {
         padding: 0 !important; margin: 0 !important;
-        /* 내용물 크기를 무시하고 오직 비율(flex-grow)로만 너비 결정 */
-        flex: 1 1 0px !important; 
-        min-width: 0px !important;
-        overflow: visible !important; /* 말이 삐져나와도 칸 자체는 늘어나지 않음 */
+        min-width: 0px !important; /* 최소 너비 0 허용 */
+        overflow: hidden !important; /* 내용물이 넘치면 잘라버림 (칸 크기 사수) */
     }
     
     div[data-testid="stHorizontalBlock"] {
         gap: 0 !important; padding: 0 !important; margin: 0 !important;
     }
 
-    /* 3. 버튼 컨테이너 */
+    /* 3. 버튼 초기화 */
     div.stButton {
         margin: 0 !important; padding: 0 !important;
         width: 100% !important; border: 0 !important;
         height: auto !important;
     }
 
-    /* 4. [핵심 수정] 버튼 본체 스타일 */
+    /* 4. 버튼 본체 (정사각형 유지) */
     div.stButton > button {
         width: 100% !important;
-        /* 버튼이 부모(컬럼)보다 커지는 것을 방지 */
-        max-width: 100% !important; 
-        aspect-ratio: 1 / 1 !important;
-        
+        aspect-ratio: 1 / 1 !important; /* 1:1 비율 강제 */
         border: none !important;
         border-radius: 0 !important;
         padding: 0 !important;
         margin: 0 !important;
         
-        /* 시각적 확대 (틈새 메우기) */
+        /* 틈새 메우기 */
         transform: scale(1.02);
         
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         
-        z-index: 1;
-        overflow: visible !important; /* 글자가 버튼 밖으로 나가도 됨 */
+        /* 중요: 글자가 버튼 밖으로 튀어나와도 버튼 크기는 영향 안 받음 */
+        overflow: hidden !important; 
     }
 
-    /* 5. 체스말(텍스트) 스타일 */
+    /* 5. [핵심 해결책] 체스말(텍스트) 스타일 */
     div.stButton > button * {
-        /* 폰트 크기를 약간 줄여서 레이아웃 부담 완화 (여전히 큼) */
-        font-size: min(6.5vw, 60px) !important; 
+        /* 화면 너비(vw)의 4.5%로 설정. 
+           px로 고정하면 화면이 작을 때 칸을 뚫고 나가지만, 
+           vw를 쓰면 칸과 함께 글자도 작아집니다. 
+        */
+        font-size: 4.5vw !important; 
+        
+        /* PC에서 너무 커지는 것 방지 (최대 55px) */
+        @media (min-width: 1000px) {
+            font-size: 55px !important;
+        }
+
         line-height: 1 !important; 
         font-weight: 400 !important; 
         color: black !important;
@@ -73,67 +77,52 @@ st.markdown("""
             1px 1px 0 #fff, -1px 1px 0 #fff, 
             1px -1px 0 #fff, -1px -1px 0 #fff !important;
             
-        /* 위치 조정: 아래쪽으로 내리기 */
+        /* 위치 미세 조정 */
         position: relative !important;
-        top: 8% !important; 
-        left: 0 !important;
+        top: 5% !important; 
         
-        /* 마우스 이벤트 통과 (클릭 씹힘 방지) */
         pointer-events: none; 
     }
-    
-    /* 텍스트 줄바꿈 방지 (혹시 모를 높이 변화 차단) */
-    div.stButton > button p {
-        white-space: nowrap !important;
-    }
 
-    /* 6. 색상 및 스타일 */
+    /* 6. 색상 */
     div.stButton > button[kind="primary"] {
         background-color: #b58863 !important;
-        outline: 1px solid #b58863 !important;
     }
     div.stButton > button[kind="secondary"] {
         background-color: #f0d9b5 !important;
-        outline: 1px solid #f0d9b5 !important;
     }
 
-    /* 7. 호버 효과 */
+    /* 7. 호버 */
     div.stButton > button:hover {
         background-color: #ffe066 !important;
-        outline: 2px solid #ffe066 !important;
-        z-index: 100 !important;
-        transform: scale(1.1) !important;
         cursor: pointer;
     }
-
+    
     /* 8. 좌표 라벨 */
     .rank-label {
         height: 100%; display: flex; align-items: center; justify-content: flex-end;
-        font-weight: bold; font-size: 18px; color: #333; padding-right: 15px;
-        white-space: nowrap; /* 줄바꿈 방지 */
+        font-weight: bold; font-size: 16px; color: #333; padding-right: 10px;
     }
     .file-label {
-        width: 100%; text-align: center; font-weight: bold; font-size: 18px; color: #333;
+        width: 100%; text-align: center; font-weight: bold; font-size: 16px; color: #333;
         padding-top: 5px;
     }
-    
-    /* 9. 사이드바 버튼 리셋 */
+
+    /* 9. 사이드바 버튼 리셋 (영향 받지 않도록) */
     section[data-testid="stSidebar"] div.stButton > button {
-        width: 100% !important; margin: 5px 0 !important;
         aspect-ratio: auto !important; 
-        background-color: white !important; border: 1px solid #ccc !important;
-        box-shadow: none !important; transform: none !important;
-        outline: none !important; padding: 0.5rem !important;
-        overflow: hidden !important;
+        background-color: white !important; 
+        margin: 5px 0 !important;
+        border: 1px solid #ccc !important;
     }
     section[data-testid="stSidebar"] div.stButton > button * {
-        font-size: 16px !important; line-height: 1.5 !important; 
-        top: 0 !important; pointer-events: auto;
+        font-size: 16px !important;
+        top: 0 !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 세션 초기화 ---
+# --- 세션 및 로직 ---
 if 'board' not in st.session_state: st.session_state.board = chess.Board()
 if 'selected_square' not in st.session_state: st.session_state.selected_square = None
 if 'msg' not in st.session_state: st.session_state.msg = "게임을 시작합니다."
@@ -146,7 +135,6 @@ stockfish_path = shutil.which("stockfish")
 if not stockfish_path and os.path.exists("/usr/games/stockfish"):
     stockfish_path = "/usr/games/stockfish"
 
-# --- 로직 함수들 ---
 def play_engine_move(skill_level):
     if not stockfish_path or st.session_state.board.is_game_over(): return
     try:
@@ -253,11 +241,12 @@ ranks = range(7, -1, -1) if is_white else range(8)
 files = range(8) if is_white else range(7, -1, -1)
 file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-# [중요] Flex-basis를 0으로 했기 때문에, 비율(flex-grow)이 절대적인 크기를 결정합니다.
+# 비율: 왼쪽 라벨(0.5) + 보드(1.0 * 8)
 col_ratios = [0.5] + [1] * 8
 
 for rank in ranks:
     cols = st.columns(col_ratios)
+    # 랭크 라벨 (좌측)
     cols[0].markdown(f"<div class='rank-label'>{rank + 1}</div>", unsafe_allow_html=True)
     
     for i, file in enumerate(files):
@@ -268,10 +257,12 @@ for rank in ranks:
         is_dark = (rank + file) % 2 == 0
         btn_type = "primary" if is_dark else "secondary"
         
+        # 버튼 생성
         if cols[i+1].button(symbol, key=f"sq_{sq}", type=btn_type):
             handle_click(sq)
             st.rerun()
 
+# 하단 파일 라벨
 footer = st.columns(col_ratios)
 footer[0].write("")
 for i, label in enumerate(file_labels):
@@ -280,12 +271,14 @@ for i, label in enumerate(file_labels):
 st.divider()
 st.info(st.session_state.msg)
 
+# 상태 표시
 if st.session_state.board.is_check(): st.error("🔥 체크!")
 if st.session_state.board.is_game_over():
     st.success(f"종료: {st.session_state.board.result()}")
     if st.button("📊 분석"): analyze_game(); st.rerun()
 if st.session_state.analysis_data: st.line_chart(st.session_state.analysis_data)
 
+# AI 턴
 if not st.session_state.board.is_game_over() and st.session_state.board.turn != st.session_state.player_color:
     play_engine_move(skill)
     st.rerun()
