@@ -219,7 +219,7 @@ def analyze_game():
 # ================= UI 레이아웃 =================
 
 # 제목
-st.title("♟️ Classic Chess")
+st.title("♟️ Playing Chess with AI")
 
 # --- 사이드바 ---
 with st.sidebar:
