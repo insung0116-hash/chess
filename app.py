@@ -7,10 +7,10 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 체스말 크기 확대 및 틈새 제거 유지 ---
+# --- CSS: 체스말(텍스트) 크기 강제 확대 ---
 st.markdown("""
 <style>
-    /* 1. 배경 */
+    /* 1. 기본 배경 및 레이아웃 */
     .stApp { background-color: #e0e0e0; }
     .block-container {
         padding-top: 1rem;
@@ -18,35 +18,36 @@ st.markdown("""
         max-width: 800px;
     }
 
-    /* 2. 오버플로우 허용 */
+    /* 2. 오버플로우 허용 (말이 커서 삐져나와도 잘리지 않게) */
     div[data-testid="column"], 
     div[data-testid="stHorizontalBlock"], 
-    div.stButton {
+    div.stButton,
+    div.stButton > button {
         overflow: visible !important;
     }
 
-    /* 3. 줄 간격 제거 (세로 틈새 방지) */
+    /* 3. 틈새 제거 (세로) */
     div[data-testid="stHorizontalBlock"] {
         gap: 0 !important; padding: 0 !important; margin: 0 !important;
         margin-bottom: -14px !important; 
     }
 
-    /* 4. 컬럼 간격 제거 (가로 틈새 방지) */
+    /* 4. 틈새 제거 (가로) */
     div[data-testid="column"] {
         padding: 0 !important; margin: 0 !important;
         flex: 1 1 auto !important; min-width: 0 !important;
     }
     
-    /* 5. 버튼 기본 초기화 */
+    /* 5. 버튼 컨테이너 초기화 */
     div.stButton {
         margin: 0 !important; padding: 0 !important;
         width: 100% !important; border: 0 !important;
     }
 
-    /* 6. [핵심 수정] 버튼 스타일 및 폰트 크기 확대 */
+    /* 6. [핵심] 버튼 본체 스타일 */
     div.stButton > button {
-        width: 120% !important;        /* 틈새 메우기용 너비 확대 */
-        margin-left: -7.5% !important; /* 중앙 정렬 보정 */
+        width: 115% !important;        
+        margin-left: -7.5% !important; 
         
         min-height: 50px !important;
         aspect-ratio: 1 / 1 !important;
@@ -54,24 +55,36 @@ st.markdown("""
         border-radius: 0 !important;
         padding: 0 !important;
         
-        /* --- [여기서 크기를 조절합니다] --- */
-        /* 모바일/반응형: 3.5vw -> 5vw (대폭 확대) */
-        font-size: 5vw !important; 
+        /* 텍스트 정렬 */
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
         
-        /* 폰트 높이 설정 (수직 중앙 정렬 유지) */
-        line-height: 1.0 !important; 
-        padding-bottom: 5px !important; /* 이모지가 약간 위로 쏠리는 현상 보정 */
-        
-        font-weight: bold;
+        /* 폰트 설정 (여기서는 기본값만 잡고 아래에서 덮어씌움) */
+        line-height: 1 !important; 
         color: black !important;
         text-shadow: 
             2px 2px 0 #fff, -2px 2px 0 #fff, 
-            2px -2px 0 #fff, -2px -2px 0 #fff !important; /* 테두리도 약간 두껍게 */
-            
+            2px -2px 0 #fff, -2px -2px 0 #fff !important;
         z-index: 1;
     }
+
+    /* 7. [진짜 핵심] 버튼 내부의 모든 텍스트 요소(p, div, span)를 직접 타격하여 크기 키움 */
+    div.stButton > button * {
+        font-size: 70px !important; /* PC 기준 매우 큼 */
+        line-height: 1 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
     
-    /* 7. 틈새 메우기 (Caulking) - 그림자 */
+    /* 반응형(모바일) 폰트 크기 조정 */
+    @media (max-width: 800px) {
+        div.stButton > button * {
+            font-size: 10vw !important; /* 화면 너비의 10% 크기로 강제 */
+        }
+    }
+
+    /* 8. 틈새 메우기 (Caulking) */
     div.stButton > button[kind="primary"] {
         background-color: #b58863 !important;
         box-shadow: 0 0 0 2px #b58863 !important; 
@@ -81,21 +94,12 @@ st.markdown("""
         box-shadow: 0 0 0 2px #f0d9b5 !important;
     }
 
-    /* 8. PC 화면에서 폰트 크기 고정 */
-    @media (min-width: 800px) {
-        div.stButton > button { 
-            /* PC: 45px -> 65px (대폭 확대) */
-            font-size: 65px !important; 
-            min-height: 60px !important;
-        }
-    }
-
-    /* 9. 마우스 호버 효과 */
+    /* 9. 마우스 호버 */
     div.stButton > button:hover {
         background-color: #ffe066 !important;
         box-shadow: 0 0 0 2px #ffe066, 0 0 15px rgba(0,0,0,0.5) !important;
         z-index: 100 !important;
-        transform: scale(1.15); /* 호버 시 더 크게 */
+        transform: scale(1.15);
         cursor: pointer;
     }
     
@@ -106,7 +110,7 @@ st.markdown("""
         z-index: 50 !important;
     }
 
-    /* 11. 좌표 디자인 */
+    /* 11. 좌표 및 외부 UI */
     .rank-label {
         height: 100%; display: flex; align-items: center; justify-content: flex-end;
         font-weight: bold; font-size: 20px; color: #333; padding-right: 15px;
@@ -116,20 +120,24 @@ st.markdown("""
         width: 100%; text-align: center; font-weight: bold; font-size: 20px; color: #333;
         padding-top: 10px;
     }
-    
-    /* 12. UI 버튼 복구 */
     .control-area div.stButton > button, 
     section[data-testid="stSidebar"] div.stButton > button {
         width: 100% !important; margin: 5px 0 !important;
-        aspect-ratio: auto !important; font-size: 16px !important;
+        aspect-ratio: auto !important; 
         background-color: white !important; border: 1px solid #ccc !important;
         box-shadow: none !important; transform: none !important;
-        min-height: auto !important; padding: 0.5rem !important; /* 패딩 복구 */
+        min-height: auto !important; padding: 0.5rem !important;
+    }
+    
+    /* 사이드바/컨트롤 버튼의 폰트 크기는 작게 유지 */
+    .control-area div.stButton > button *,
+    section[data-testid="stSidebar"] div.stButton > button * {
+        font-size: 16px !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 세션 초기화 ---
+# --- 세션 및 기본 설정 ---
 if 'board' not in st.session_state: st.session_state.board = chess.Board()
 if 'selected_square' not in st.session_state: st.session_state.selected_square = None
 if 'msg' not in st.session_state: st.session_state.msg = "게임을 시작합니다."
@@ -142,7 +150,7 @@ stockfish_path = shutil.which("stockfish")
 if not stockfish_path and os.path.exists("/usr/games/stockfish"):
     stockfish_path = "/usr/games/stockfish"
 
-# --- 로직 함수들 ---
+# --- 로직 ---
 def play_engine_move(skill_level):
     if not stockfish_path or st.session_state.board.is_game_over(): return
     try:
@@ -246,7 +254,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 st.divider()
 
-# --- 메인 체스판 ---
+# --- 체스판 렌더링 ---
 is_white = st.session_state.player_color == chess.WHITE
 ranks = range(7, -1, -1) if is_white else range(8)
 files = range(8) if is_white else range(7, -1, -1)
