@@ -7,10 +7,10 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 격자 구조 복구 + 시각적 확대 전략 ---
+# --- CSS: 좌우 틈새 완전 박멸 (확대 + 그림자 메움) ---
 st.markdown("""
 <style>
-    /* 1. 기본 배경 */
+    /* 1. 배경 */
     .stApp { background-color: #e0e0e0; }
     .block-container {
         padding-top: 1rem;
@@ -18,116 +18,152 @@ st.markdown("""
         max-width: 800px;
     }
 
-    /* 2. 컬럼 및 로우 간격 제거 (물리적 틈 제거) */
-    div[data-testid="column"] {
-        padding: 0 !important; margin: 0 !important;
-    }
-    div[data-testid="stHorizontalBlock"] {
-        gap: 0 !important; padding: 0 !important; margin: 0 !important;
-    }
-
-    /* 3. 버튼 컨테이너 초기화 */
+    /* 2. [필수] 컨테이너들의 오버플로우 허용 (겹친 부분이 잘리지 않게) */
+    div[data-testid="column"], 
+    div[data-testid="stHorizontalBlock"], 
     div.stButton {
-        margin: 0 !important; padding: 0 !important;
-        width: 100% !important; border: 0 !important;
-        /* 버튼 높이를 강제로 통일하여 계단 현상 방지 */
-        height: auto !important;
+        overflow: visible !important;
     }
 
-    /* 4. [핵심] 버튼 본체 스타일 (격자 복구) */
+    /* 3. [세로 틈 제거 유지] 아랫줄을 위로 강제 견인 */
+    div[data-testid="stHorizontalBlock"] {
+        gap: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        margin-bottom: -14px !important; /* 위아래 밀착 유지 */
+    }
+
+    /* 4. [좌우 틈 제거 1단계] 컬럼 간격 삭제 */
+    div[data-testid="column"] {
+        padding: 0 !important;
+        margin: 0 !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+    }
+    
+    /* 5. 버튼 기본 초기화 */
+    div.stButton {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        border: 0 !important;
+    }
+
+    /* 6. [좌우 틈 제거 2단계] 버튼 과장 확대 */
     div.stButton > button {
-        width: 100% !important;  /* 115% 제거 -> 100%로 정위치 */
+        width: 120% !important;       /* 115%로 대폭 확대 */
+        margin-left: -7.5% !important; /* 중앙 정렬을 위해 좌측으로 당김 */
+        
+        min-height: 50px !important;
         aspect-ratio: 1 / 1 !important;
         border: none !important;
         border-radius: 0 !important;
         padding: 0 !important;
-        margin: 0 !important; /* 마진 0으로 격자 딱 맞춤 */
         
-        /* [중요] 격자는 유지하되, 시각적으로만 3% 확대하여 미세한 틈을 덮어버림 */
-        transform: scale(1.03); 
+        /* 폰트 */
+        font-size: 3.5vw !important;
+        line-height: 1 !important;
+        font-weight: bold;
+        color: black !important;
+        text-shadow: 
+            1.5px 1.5px 0 #fff, -1.5px 1.5px 0 #fff, 
+            1.5px -1.5px 0 #fff, -1.5px -1.5px 0 #fff !important;
+            
+        z-index: 1; /* 기본 레벨 */
+    }
+    
+    /* 7. [좌우 틈 제거 3단계 - 필살기] 같은 색 그림자로 틈새 메우기 (Caulking) */
+    /* 갈색(Primary) 칸은 갈색 그림자로 2px 확장 */
+    div.stButton > button[kind="primary"] {
+        background-color: #b58863 !important;
+        box-shadow: 0 0 0 2px #b58863 !important; 
+    }
+    /* 베이지색(Secondary) 칸은 베이지색 그림자로 2px 확장 */
+    div.stButton > button[kind="secondary"] {
+        background-color: #f0d9b5 !important;
+        box-shadow: 0 0 0 2px #f0d9b5 !important;
+    }
+
+   /* 6. [핵심] 버튼 본체 스타일 */
+    div.stButton > button {
+        width: 115% !important;        
+        margin-left: -7.5% !important; 
         
-        /* 내용물 정렬 */
+        min-height: 50px !important;
+        aspect-ratio: 1 / 1 !important;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        
+        /* 텍스트 정렬 */
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         
-        z-index: 1;
-    }
-
-    /* 5. [체스말 크기] 내부 텍스트 강제 확대 */
-    div.stButton > button * {
-        /* 폰트 크기: 버튼의 70% 정도를 차지하도록 설정 */
-        font-size: min(8vw, 65px) !important; 
-        
-        /* 줄 간격을 0으로 만들어 높이 왜곡 방지 */
-        line-height: 0 !important; 
-        
-        /* 폰트 굵기 및 외곽선 */
-        font-weight: 900 !important;
+        /* 폰트 설정 (여기서는 기본값만 잡고 아래에서 덮어씌움) */
+        line-height: 1 !important; 
         color: black !important;
-        
-        /* 텍스트 외곽선 (가독성) */
         text-shadow: 
             2px 2px 0 #fff, -2px 2px 0 #fff, 
             2px -2px 0 #fff, -2px -2px 0 #fff !important;
-            
-        /* 미세 위치 조정 (이모지 특성상 살짝 위로 쏠리는 것 보정) */
-        position: relative;
-        top: -3px; 
+        z-index: 1;
     }
 
-    /* 6. 색상 및 줄눈 효과 */
-    div.stButton > button[kind="primary"] {
-        background-color: #b58863 !important;
-        /* 버튼 자체의 색상으로 경계선 확장 */
-        outline: 1px solid #b58863 !important;
+    /* 7. [진짜 핵심] 버튼 내부의 모든 텍스트 요소(p, div, span)를 직접 타격하여 크기 키움 */
+    div.stButton > button * {
+        font-size: 70px !important; /* PC 기준 매우 큼 */
+        line-height: 1 !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
-    div.stButton > button[kind="secondary"] {
-        background-color: #f0d9b5 !important;
-        outline: 1px solid #f0d9b5 !important;
+    
+    /* 반응형(모바일) 폰트 크기 조정 */
+    @media (max-width: 800px) {
+        div.stButton > button * {
+            font-size: 10vw !important; /* 화면 너비의 10% 크기로 강제 */
+        }
     }
 
-    /* 7. 마우스 호버 및 클릭 효과 */
+    /* 8. 마우스 호버 효과 */
     div.stButton > button:hover {
         background-color: #ffe066 !important;
-        outline: 2px solid #ffe066 !important;
-        z-index: 100 !important; /* 호버 시 맨 위로 */
+        box-shadow: 0 0 0 2px #ffe066, 0 0 15px rgba(0,0,0,0.5) !important; /* 호버 시 그림자 색도 변경 */
+        z-index: 100 !important;
+        transform: scale(1.1);
         cursor: pointer;
-        transform: scale(1.1) !important; /* 호버 시 조금 더 커짐 */
     }
+    
+    /* 9. 선택 효과 */
     div.stButton > button:focus {
         background-color: #ffcc00 !important;
         box-shadow: inset 0 0 0 4px #d9534f !important;
         z-index: 50 !important;
     }
 
-    /* 8. 좌표 및 외부 UI 정리 */
+    /* 10. 좌표 디자인 */
     .rank-label {
         height: 100%; display: flex; align-items: center; justify-content: flex-end;
         font-weight: bold; font-size: 20px; color: #333; padding-right: 15px;
+        margin-top: -10px; 
     }
     .file-label {
         width: 100%; text-align: center; font-weight: bold; font-size: 20px; color: #333;
         padding-top: 10px;
     }
     
-    /* 컨트롤 버튼 등 다른 버튼은 정상 크기로 유지 */
+    /* 11. 외부 UI 정상화 */
     .control-area div.stButton > button, 
     section[data-testid="stSidebar"] div.stButton > button {
         width: 100% !important; margin: 5px 0 !important;
-        aspect-ratio: auto !important; 
+        aspect-ratio: auto !important; font-size: 16px !important;
         background-color: white !important; border: 1px solid #ccc !important;
         box-shadow: none !important; transform: none !important;
-        outline: none !important;
-    }
-    .control-area div.stButton > button *,
-    section[data-testid="stSidebar"] div.stButton > button * {
-        font-size: 16px !important; line-height: 1.5 !important; top: 0;
+        min-height: auto !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 세션 및 기본 설정 ---
+# --- 세션 초기화 ---
 if 'board' not in st.session_state: st.session_state.board = chess.Board()
 if 'selected_square' not in st.session_state: st.session_state.selected_square = None
 if 'msg' not in st.session_state: st.session_state.msg = "게임을 시작합니다."
@@ -250,13 +286,16 @@ ranks = range(7, -1, -1) if is_white else range(8)
 files = range(8) if is_white else range(7, -1, -1)
 file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-# 좌표와 체스판 비율
+# 비율
 col_ratios = [0.5] + [1] * 8
 
 for rank in ranks:
     cols = st.columns(col_ratios)
+    
+    # 왼쪽 좌표
     cols[0].markdown(f"<div class='rank-label'>{rank + 1}</div>", unsafe_allow_html=True)
     
+    # 체스판 칸
     for i, file in enumerate(files):
         sq = chess.square(file, rank)
         piece = st.session_state.board.piece_at(sq)
@@ -265,7 +304,6 @@ for rank in ranks:
         is_dark = (rank + file) % 2 == 0
         btn_type = "primary" if is_dark else "secondary"
         
-        # 버튼 생성 (빈 칸일 때도 공간 유지)
         if cols[i+1].button(symbol, key=f"sq_{sq}", type=btn_type):
             handle_click(sq)
             st.rerun()
