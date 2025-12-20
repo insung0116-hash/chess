@@ -49,41 +49,6 @@ st.markdown("""
         border: 0 !important;
     }
 
-    /* 6. [좌우 틈 제거 2단계] 버튼 과장 확대 */
-    div.stButton > button {
-        width: 150% !important;       /* 115%로 대폭 확대 */
-        margin-left: -7.5% !important; /* 중앙 정렬을 위해 좌측으로 당김 */
-        
-        min-height: 50px !important;
-        aspect-ratio: 1 / 1 !important;
-        border: none !important;
-        border-radius: 0 !important;
-        padding: 0 !important;
-        
-        /* 폰트 */
-        font-size: 3.5vw !important;
-        line-height: 1 !important;
-        font-weight: bold;
-        color: black !important;
-        text-shadow: 
-            1.5px 1.5px 0 #fff, -1.5px 1.5px 0 #fff, 
-            1.5px -1.5px 0 #fff, -1.5px -1.5px 0 #fff !important;
-            
-        z-index: 1; /* 기본 레벨 */
-    }
-    
-    /* 7. [좌우 틈 제거 3단계 - 필살기] 같은 색 그림자로 틈새 메우기 (Caulking) */
-    /* 갈색(Primary) 칸은 갈색 그림자로 2px 확장 */
-    div.stButton > button[kind="primary"] {
-        background-color: #b58863 !important;
-        box-shadow: 0 0 0 2px #b58863 !important; 
-    }
-    /* 베이지색(Secondary) 칸은 베이지색 그림자로 2px 확장 */
-    div.stButton > button[kind="secondary"] {
-        background-color: #f0d9b5 !important;
-        box-shadow: 0 0 0 2px #f0d9b5 !important;
-    }
-
    /* 6. [핵심] 버튼 본체 스타일 */
     div.stButton > button {
         width: 115% !important;        
