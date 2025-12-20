@@ -40,7 +40,7 @@ st.markdown("""
 
     /* 4. [핵심] 체스판 버튼 본체 (틈새 메우기) */
     div.stButton > button {
-        width: 100% !important;
+        width: 500% !important;
         aspect-ratio: 1 / 1 !important;
         border: none !important;
         border-radius: 0px !important; /* 둥근 모서리 제거 */
