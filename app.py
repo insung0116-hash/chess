@@ -7,65 +7,74 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 가로/세로 '물리적 당기기' ---
+# --- CSS: 바둑판처럼 모든 틈새를 없애는 스타일 ---
 st.markdown("""
 <style>
-    /* 1. 기본 배경 */
+    /* 1. 배경 */
     .stApp { background-color: #f4f4f4; }
     
-    /* 2. [세로 해결] 줄(Row) 간격 강제 삭제 */
-    /* Streamlit의 가로 블록(한 줄) 자체의 아래쪽 여백을 없애서 윗줄과 붙게 만듭니다 */
+    /* 2. [핵심] 가로 줄(Row) 간격 강제 삭제 및 위로 끌어당기기 */
+    /* Streamlit은 줄마다 기본적으로 여백을 둡니다. 이를 -16px로 설정하여 윗줄에 붙입니다. */
     div[data-testid="stHorizontalBlock"] {
-        margin-bottom: -15px !important; /* 이 수치로 줄 간격을 조절합니다 (필요시 -16px 등으로 조절) */
+        margin-bottom: -16px !important; 
         gap: 0px !important;
         padding: 0px !important;
         overflow: visible !important;
     }
 
-    /* 3. 컬럼 간격 삭제 */
+    /* 3. 컬럼(열) 간격 삭제 */
     div[data-testid="column"] {
         padding: 0px !important;
         margin: 0px !important;
         min-width: 0px !important;
+        display: flex !important;
+        align-items: center !important; /* 버튼 수직 중앙 정렬 */
     }
     
-    /* 4. [가로 해결] 버튼 스타일 */
-    div.stButton > button {
-        /* 가로: 106%로 늘려서 옆 칸 흰색 선 덮기 */
-        width: 106% !important;
-        margin-left: -3% !important; /* 중앙 정렬 보정 */
-        
-        /* 세로 높이 비율 고정 */
-        aspect-ratio: 1 / 1;
-        
-        /* 폰트 설정 */
-        font-size: 40px !important; 
-        
-        /* 테두리 및 여백 제거 */
+    /* 4. 버튼 감싸는 div 여백 제거 */
+    div.stButton {
         padding: 0px !important;
-        border: none !important;
-        border-radius: 0px !important;
+        margin: 0px !important;
+        width: 100% !important;
+        border: 0px !important;
+    }
+    
+    /* 5. [핵심] 버튼 본체 스타일 (완벽한 사각형) */
+    div.stButton > button {
+        width: 100% !important; /* 꽉 채우기 */
+        aspect-ratio: 1 / 1 !important; /* 정사각형 강제 */
+        
+        /* 폰트 및 아이콘 */
+        font-size: 38px !important;
         line-height: 1 !important;
         
-        /* 겹침 처리 */
-        position: relative;
-        z-index: 1;
+        /* 테두리 및 둥근 모서리 제거 (완전 직각) */
+        padding: 0px !important;
+        margin: 0px !important;
+        border: none !important;
+        border-radius: 0px !important;
         
-        /* 텍스트 꾸미기 */
+        /* 버튼 내부 텍스트 그림자 (시인성) */
         color: #000000 !important;
         text-shadow: 
             1.5px 0 #fff, -1.5px 0 #fff, 0 1.5px #fff, 0 -1.5px #fff,
             1px 1px #fff, -1px -1px #fff, 1px -1px #fff, -1px 1px #fff !important;
+            
+        /* 미세한 겹침 허용 */
+        position: relative;
+        z-index: 1;
     }
 
-    /* 5. 마우스 올렸을 때 */
+    /* 6. 마우스 오버 효과 */
     div.stButton > button:hover, div.stButton > button:focus {
         background-color: #f7e034 !important;
-        z-index: 100 !important; /* 겹친 상태에서 위로 */
+        z-index: 100 !important;
         outline: none !important;
+        transform: scale(1.05); /* 살짝 커지며 강조 */
+        box-shadow: 0 0 10px rgba(0,0,0,0.5);
     }
 
-    /* 6. 체스판 색상 */
+    /* 7. 체스판 색상 */
     div.stButton > button[kind="primary"] {
         background-color: #D18B47 !important;
     }
@@ -73,24 +82,27 @@ st.markdown("""
         background-color: #FFCE9E !important;
     }
 
-    /* 7. 사이드바 버튼 등 다른 버튼은 정상적으로 표시 */
-    section[data-testid="stSidebar"] div.stButton > button {
-        width: 100% !important; margin: 0 !important; margin-bottom: 10px !important;
-        height: auto !important; aspect-ratio: auto !important;
-        border-radius: 8px !important; font-size: 16px !important;
-        text-shadow: none !important; padding: 0.5rem 1rem !important;
-    }
-
-    /* 8. 좌표 디자인 */
+    /* 8. 좌표 스타일 (위치 미세 조정) */
     .rank-label {
         font-weight: 900; font-size: 20px; color: #555;
         display: flex; align-items: center; justify-content: center; height: 100%;
-        margin-right: -10px; padding-bottom: 15px; /* 줄 간격을 당겼으므로 좌표도 위치 보정 */
+        margin-right: -10px; margin-top: -8px; /* 위로 당겨진 만큼 좌표도 보정 */
     }
     .file-label {
         font-weight: 900; font-size: 20px; color: #555;
         display: flex; justify-content: center; width: 100%;
-        margin-top: -5px; 
+        padding-top: 10px; /* 하단 좌표는 조금 띄움 */
+    }
+
+    /* 9. 사이드바 등 다른 버튼 보호 */
+    section[data-testid="stSidebar"] div.stButton > button, 
+    div[data-testid="stVerticalBlock"] > div > button {
+        /* 체스판 외의 버튼은 원래대로 복구 */
+        width: auto !important; margin-bottom: 10px !important;
+        height: auto !important; aspect-ratio: auto !important;
+        border-radius: 8px !important; font-size: 16px !important;
+        padding: 0.5rem 1rem !important;
+        margin-top: 0px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -217,12 +229,12 @@ with main_col:
 
     col_ratios = [0.7] + [2] * 8
 
-    # 1. 체스판 루프
+    # --- 1. 체스판 루프 ---
     for rank in ranks:
-        # gap="small"은 유지하되, CSS로 margin-bottom을 -15px로 당깁니다.
+        # gap="small"을 쓰되, CSS margin-bottom: -16px이 작동하여 줄을 붙입니다.
         cols = st.columns(col_ratios, gap="small")
         
-        # 숫자 좌표
+        # 숫자 좌표 (왼쪽)
         cols[0].markdown(f"<div class='rank-label'>{rank + 1}</div>", unsafe_allow_html=True)
         
         for i, file in enumerate(files):
@@ -233,15 +245,15 @@ with main_col:
             is_dark = (rank + file) % 2 == 0
             btn_type = "primary" if is_dark else "secondary"
             
+            # 버튼 렌더링
             if cols[i+1].button(symbol, key=f"sq_{sq}", type=btn_type):
                 handle_click(sq)
                 st.rerun()
 
-    # 2. 하단 좌표
-    # 체스판과 좌표 사이에도 여백이 생기지 않도록 CSS가 당겨줍니다.
+    # --- 2. 하단 좌표 ---
+    # 체스판과 좌표 사이 간격을 띄우기 위해 빈 공간을 두지 않고 바로 출력
     footer = st.columns(col_ratios, gap="small")
-    footer[0].markdown("<div></div>", unsafe_allow_html=True) 
-    
+    footer[0].write("") # 빈칸
     for i, label in enumerate(file_labels):
         footer[i+1].markdown(f"<div class='file-label'>{label}</div>", unsafe_allow_html=True)
 
