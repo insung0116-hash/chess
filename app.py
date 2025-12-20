@@ -7,41 +7,44 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: '확장 전략' 적용 ---
+# --- CSS: 버튼을 강제로 키워서 틈새를 덮어버리는 스타일 ---
 st.markdown("""
 <style>
     /* 1. 배경 */
     .stApp { background-color: #f4f4f4; }
     
-    /* 2. [핵심] 틈새 제거를 위한 컨테이너 설정 */
-    /* 수평 블록의 간격을 0으로 하고 패딩을 없앱니다 */
+    /* 2. 컬럼 컨테이너 간격 강제 제거 */
     div[data-testid="stHorizontalBlock"] {
         gap: 0px !important;
         padding: 0px !important;
+        overflow: visible !important; /* 겹친 부분이 잘리지 않게 */
     }
+
+    /* 3. 개별 컬럼 패딩 제거 */
     div[data-testid="column"] {
         padding: 0px !important;
         margin: 0px !important;
         min-width: 0px !important;
     }
-
-    /* 3. [핵심 해결책] 버튼 스타일 (확장 & 겹침) */
+    
+    /* 4. [핵심] 버튼 스타일 (물리적 겹침 전략) */
     section[data-testid="stMain"] div.stButton > button {
-        /* 너비를 100%보다 크게 잡아서 옆 칸의 빈틈을 덮어버립니다 */
-        width: 106% !important; 
+        /* 너비를 110%로 설정하여 원래 칸보다 더 넓게 만듭니다 (틈새 원천 봉쇄) */
+        width: 110% !important;
         
-        /* 커진 만큼 왼쪽으로 살짝 당겨서 중앙을 맞춥니다 */
-        margin-left: -3% !important; 
+        /* 양옆으로 5%씩 삐져나가게 하여 옆 칸과 겹치게 만듭니다 */
+        margin-left: -5% !important;
+        margin-right: -5% !important;
         
         /* 높이 비율 유지 */
         aspect-ratio: 1 / 1;
         
-        /* 폰트/이모지 확대 */
+        /* 폰트/이모지 설정 */
         font-size: 45px !important; 
         transform: scale(1.8) !important;
         transform-origin: center center !important;
         
-        /* 꾸미기 */
+        /* 색상 및 테두리 */
         color: #000000 !important;
         text-shadow: 
             1.5px 0 #fff, -1.5px 0 #fff, 0 1.5px #fff, 0 -1.5px #fff,
@@ -49,17 +52,15 @@ st.markdown("""
             
         padding: 0px !important;
         border: none !important;
-        border-radius: 0px !important; /* 모서리를 직각으로 해서 딱 붙게 */
+        border-radius: 0px !important; /* 완전 사각형 */
         line-height: 1 !important;
-        overflow: visible !important;
-        padding-bottom: 8px !important; 
         
-        /* [중요] 겹쳤을 때 위아래 우선순위 문제 해결 */
-        position: relative; 
+        /* 겹침 처리 */
+        position: relative;
         z-index: 1;
     }
 
-    /* 4. 체스판 색상 */
+    /* 5. 칸 색상 */
     section[data-testid="stMain"] div.stButton > button[kind="primary"] {
         background-color: #D18B47 !important;
     }
@@ -67,36 +68,39 @@ st.markdown("""
         background-color: #FFCE9E !important;
     }
     
-    /* 포커스 및 호버 시 가장 위로 올라오게 */
-    section[data-testid="stMain"] div.stButton > button:focus,
-    section[data-testid="stMain"] div.stButton > button:hover {
+    /* 6. 마우스 오버/포커스 시 맨 위로 */
+    section[data-testid="stMain"] div.stButton > button:hover,
+    section[data-testid="stMain"] div.stButton > button:focus {
         background-color: #f7e034 !important;
-        z-index: 100 !important; /* 겹친 상태에서도 선택된 건 맨 위로 */
+        z-index: 100 !important; /* 겹친 상태에서 선택된 놈을 앞으로 끄집어냄 */
         outline: none !important;
+        box-shadow: 0 0 10px rgba(0,0,0,0.5); /* 선택된 느낌 강조 */
     }
 
-    /* 5. 사이드바 등 다른 버튼 보호 */
+    /* 7. 사이드바 버튼 보호 (체스판 스타일 영향 안 받게) */
     section[data-testid="stSidebar"] div.stButton > button {
-        width: 100% !important; 
-        margin-left: 0 !important;
+        width: 100% !important; margin: 0 !important;
         height: auto; aspect-ratio: auto;
         font-size: 16px !important; transform: none !important;
         text-shadow: none !important;
-        padding: 0.5rem 1rem !important; margin-bottom: 10px; border-radius: 8px !important;
+        padding: 0.5rem 1rem !important; margin-bottom: 10px !important; 
+        border-radius: 8px !important;
     }
 
-    /* 6. 좌표 폰트 */
+    /* 8. 좌표 폰트 및 정렬 */
     .rank-label {
         display: flex; align-items: center; justify-content: center;
         height: 100%; font-weight: 900; font-size: 20px; color: #555;
-        padding-right: 10px;
+        padding-right: 15px; 
     }
+    
     .file-label {
         display: flex; align-items: center; justify-content: center;
         width: 100%; height: 50px; 
         font-weight: 900; font-size: 20px; color: #555;
         margin-top: -5px;
-        transform: translateX(-5px); 
+        /* 좌표도 살짝 왼쪽으로 */
+        transform: translateX(-10px); 
     }
 </style>
 """, unsafe_allow_html=True)
@@ -114,7 +118,7 @@ stockfish_path = shutil.which("stockfish")
 if not stockfish_path and os.path.exists("/usr/games/stockfish"):
     stockfish_path = "/usr/games/stockfish"
 
-# --- 로직 ---
+# --- 로직 함수들 ---
 def play_engine_move(skill_level):
     if not stockfish_path or st.session_state.board.is_game_over(): return
     try:
@@ -225,6 +229,7 @@ with main_col:
 
     # 1. 체스판
     for rank in ranks:
+        # gap="small" 유지 (CSS로 덮어씀)
         cols = st.columns(col_ratios, gap="small")
         cols[0].markdown(f"<div class='rank-label'>{rank + 1}</div>", unsafe_allow_html=True)
         
@@ -236,6 +241,7 @@ with main_col:
             is_dark = (rank + file) % 2 == 0
             btn_type = "primary" if is_dark else "secondary"
             
+            # CSS가 버튼을 110%로 키워서 옆으로 밀어버리므로 틈이 보일 수가 없습니다.
             if cols[i+1].button(symbol, key=f"sq_{sq}", type=btn_type):
                 handle_click(sq)
                 st.rerun()
