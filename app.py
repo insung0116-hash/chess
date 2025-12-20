@@ -84,9 +84,9 @@ st.markdown("""
     /* 8. PC 화면에서 폰트 크기 고정 */
     @media (min-width: 800px) {
         div.stButton > button { 
-            /* PC: 45px -> 65px (대폭 확대) */
+            /* PC: 45px -> 100px (대폭 확대) */
             font-size: 100px !important; 
-            min-height: 60px !important;
+            min-height: 100px !important;
         }
     }
 
