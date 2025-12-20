@@ -45,8 +45,8 @@ st.markdown("""
         border-radius: 0 !important;
         margin: 0 !important; padding: 0 !important;
         
-        /* [수정] 틈새를 없애기 위해 1.3배 확대하여 서로 겹치게 함 */
-        transform: scale(1.3); 
+        /* [수정] 틈새를 없애기 위해 1.25배 확대하여 서로 겹치게 함 */
+        transform: scale(1.25); 
         
         position: relative !important;
         overflow: hidden !important;
