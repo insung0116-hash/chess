@@ -7,7 +7,7 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 크기 확대 / 정렬 수정 / 틈새 제거 + [추가] 사이드바 버튼 크기 ---
+# --- CSS: 크기 확대 / 정렬 수정 / 틈새 제거 / 사이드바 버튼 커스텀 ---
 st.markdown("""
 <style>
     /* 1. 배경 및 전체 레이아웃 크기 확대 */
@@ -101,7 +101,7 @@ st.markdown("""
         padding-top: 20px;
     }
     
-    /* 9. [수정됨] 사이드바 버튼 리셋 및 크기 키우기 */
+    /* 9. 사이드바 버튼 리셋 및 크기 키우기 */
     section[data-testid="stSidebar"] div.stButton > button {
         /* 체스판용 설정 초기화 */
         width: 100% !important;
@@ -111,16 +111,16 @@ st.markdown("""
         /* 사이드바 버튼 스타일링 */
         background-color: white !important;
         border: 1px solid #ccc !important;
-        border-radius: 8px !important; /* 둥근 모서리 */
+        border-radius: 8px !important;
         margin: 5px 0 !important;
         
         /* 크기 키우기 */
-        height: 50px !important;  /* 버튼 높이 고정 */
+        height: 50px !important;  
         padding: 0px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important; /* 약간의 그림자 */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
     }
 
     /* 사이드바 버튼 텍스트 크기 */
@@ -134,20 +134,20 @@ st.markdown("""
         color: #333 !important;
     }
     
-    /* 사이드바 '게임 재시작' 버튼 (primary) 색상 별도 지정 */
+    /* [수정됨] 사이드바 '게임 재시작' 버튼: 배경 빨강, 글자 검정 */
     section[data-testid="stSidebar"] div.stButton > button[kind="primary"] {
-        background-color: #ff4b4b !important; /* 빨간색 계열 */
-        color: white !important;
+        background-color: #ff4b4b !important; /* 배경 빨강 */
+        color: black !important; /* 글자 검정 */
         border: none !important;
     }
     section[data-testid="stSidebar"] div.stButton > button[kind="primary"] * {
-        color: white !important;
+        color: black !important; /* 내부 텍스트도 검정 */
     }
 
     /* 사이드바 버튼 호버 효과 */
     section[data-testid="stSidebar"] div.stButton > button:hover {
         filter: brightness(0.95);
-        transform: scale(1.02) !important; /* 살짝 커짐 */
+        transform: scale(1.02) !important;
         cursor: pointer;
     }
 </style>
