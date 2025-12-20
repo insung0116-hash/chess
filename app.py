@@ -7,7 +7,7 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 크기 확대 / 정렬 수정 / 틈새 제거 ---
+# --- CSS: 크기 확대 / 정렬 수정 / 틈새 제거 + [추가] 사이드바 버튼 크기 ---
 st.markdown("""
 <style>
     /* 1. 배경 및 전체 레이아웃 크기 확대 */
@@ -15,7 +15,6 @@ st.markdown("""
     .block-container {
         padding-top: 1rem;
         padding-bottom: 5rem;
-        /* [수정] 체스판 크기 대폭 확대 (기존 800px -> 1000px) */
         max-width: 1000px !important; 
     }
 
@@ -25,7 +24,6 @@ st.markdown("""
         flex: 1 1 0px !important; 
         min-width: 0 !important;
     }
-    /* [수정] 수평 블록 간격 0 강제 */
     div[data-testid="stHorizontalBlock"] {
         gap: 0 !important; 
     }
@@ -37,7 +35,7 @@ st.markdown("""
         border: 0 !important;
     }
 
-    /* 4. 버튼 본체 (네모 칸) */
+    /* 4. 체스판 버튼 본체 (네모 칸) */
     div.stButton > button {
         width: 200% !important;
         aspect-ratio: 1 / 1 !important;
@@ -45,37 +43,28 @@ st.markdown("""
         border-radius: 0 !important;
         margin: 0 !important; padding: 0 !important;
         
-        /* [수정] 틈새를 없애기 위해 1.25배 확대하여 서로 겹치게 함 */
+        /* 틈새 제거용 확대 */
         transform: scale(1.25); 
         
         position: relative !important;
         overflow: hidden !important;
         z-index: 1;
         
-        /* 그림자 제거 */
         box-shadow: none !important;
     }
 
-    /* 5. 체스말 (공중 부양 & 위치 수정) */
+    /* 5. 체스말 (공중 부양) */
     div.stButton > button div,
     div.stButton > button p {
         position: absolute !important;
-        
-        /* [수정] 수직 위치: 약간 아래 (50%) */
         top: 50% !important;
-        
-        /* [수정] 수평 위치: 정중앙(50%)에서 왼쪽으로 이동 -> 50% */
         left: 50% !important; 
-        
-        /* 중앙 정렬 기준점 */
         transform: translate(-50%, -50%) !important;
         
         width: 100% !important;
         text-align: center !important;
         
-        /* [수정] 칸이 커진 만큼 폰트도 더 크게 (7vw -> 7vw) */
         font-size: min(7vw, 75px) !important;
-        
         line-height: 1 !important;
         font-weight: 400 !important;
         color: black !important;
@@ -95,10 +84,9 @@ st.markdown("""
         background-color: #f0d9b5 !important;
     }
 
-    /* 7. 호버 효과 */
+    /* 7. 호버 효과 (체스판만) */
     div.stButton > button:hover {
         background-color: #ffe066 !important;
-        /* 호버 시 앞으로 튀어나오게 하여 가려짐 방지 */
         z-index: 10 !important; 
         cursor: pointer;
     }
@@ -113,18 +101,54 @@ st.markdown("""
         padding-top: 20px;
     }
     
-    /* 9. 사이드바 리셋 */
+    /* 9. [수정됨] 사이드바 버튼 리셋 및 크기 키우기 */
     section[data-testid="stSidebar"] div.stButton > button {
+        /* 체스판용 설정 초기화 */
+        width: 100% !important;
         aspect-ratio: auto !important;
+        transform: none !important;
+        
+        /* 사이드바 버튼 스타일링 */
         background-color: white !important;
         border: 1px solid #ccc !important;
+        border-radius: 8px !important; /* 둥근 모서리 */
         margin: 5px 0 !important;
-        transform: none !important; /* 사이드바 버튼은 확대 안 함 */
+        
+        /* 크기 키우기 */
+        height: 50px !important;  /* 버튼 높이 고정 */
+        padding: 0px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important; /* 약간의 그림자 */
     }
+
+    /* 사이드바 버튼 텍스트 크기 */
     section[data-testid="stSidebar"] div.stButton > button * {
         position: static !important;
         transform: none !important;
-        font-size: 16px !important;
+        
+        /* 글자 크기 확대 */
+        font-size: 18px !important; 
+        font-weight: bold !important;
+        color: #333 !important;
+    }
+    
+    /* 사이드바 '게임 재시작' 버튼 (primary) 색상 별도 지정 */
+    section[data-testid="stSidebar"] div.stButton > button[kind="primary"] {
+        background-color: #ff4b4b !important; /* 빨간색 계열 */
+        color: white !important;
+        border: none !important;
+    }
+    section[data-testid="stSidebar"] div.stButton > button[kind="primary"] * {
+        color: white !important;
+    }
+
+    /* 사이드바 버튼 호버 효과 */
+    section[data-testid="stSidebar"] div.stButton > button:hover {
+        filter: brightness(0.95);
+        transform: scale(1.02) !important; /* 살짝 커짐 */
+        cursor: pointer;
     }
 </style>
 """, unsafe_allow_html=True)
