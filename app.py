@@ -7,71 +7,65 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 가장 강력한 강제 적용 모드 ---
+# --- CSS: 가로/세로 '물리적 당기기' ---
 st.markdown("""
 <style>
-    /* 1. 배경 */
+    /* 1. 기본 배경 */
     .stApp { background-color: #f4f4f4; }
-
-    /* 2. [초강력] 수평 블록의 갭을 강제로 없앰 (ID가 바뀌어도 적용되도록 속성 선택자 사용) */
-    div[data-testid*="HorizontalBlock"] {
+    
+    /* 2. [세로 해결] 줄(Row) 간격 강제 삭제 */
+    /* Streamlit의 가로 블록(한 줄) 자체의 아래쪽 여백을 없애서 윗줄과 붙게 만듭니다 */
+    div[data-testid="stHorizontalBlock"] {
+        margin-bottom: -15px !important; /* 이 수치로 줄 간격을 조절합니다 (필요시 -16px 등으로 조절) */
         gap: 0px !important;
         padding: 0px !important;
         overflow: visible !important;
     }
-    
-    /* 3. [초강력] 컬럼(열)의 여백을 0으로 만들고 너비 강제 조정 */
-    div[data-testid*="column"] {
+
+    /* 3. 컬럼 간격 삭제 */
+    div[data-testid="column"] {
         padding: 0px !important;
         margin: 0px !important;
         min-width: 0px !important;
-        overflow: visible !important; /* 버튼이 삐져나가도 보이게 설정 */
     }
-
-    /* 4. 버튼 감싸는 div (stButton) 여백 제거 */
-    div.stButton {
-        padding: 0px !important;
-        margin: 0px !important;
-        width: 100% !important;
-        border: 0px !important;
-    }
-
-    /* 5. [핵심 해결책] 버튼 본체 스타일 (좌우로 찢어서 틈새 메꾸기) */
+    
+    /* 4. [가로 해결] 버튼 스타일 */
     div.stButton > button {
-        width: 100% !important;
-        aspect-ratio: 1 / 1; /* 정사각형 유지 */
+        /* 가로: 106%로 늘려서 옆 칸 흰색 선 덮기 */
+        width: 106% !important;
+        margin-left: -3% !important; /* 중앙 정렬 보정 */
         
-        /* [중요] 가로로 120% 늘려서 양옆 흰색 선을 덮어버립니다 */
-        transform: scaleX(1.25) scaleY(1.0) !important; 
+        /* 세로 높이 비율 고정 */
+        aspect-ratio: 1 / 1;
         
-        font-size: 40px !important; /* 아이콘 크기 */
+        /* 폰트 설정 */
+        font-size: 40px !important; 
         
-        /* 겹침 문제 해결: 삐져나온 부분이 다른 버튼 위에 보이도록 */
-        position: relative !important;
-        z-index: 1;
-        
+        /* 테두리 및 여백 제거 */
         padding: 0px !important;
-        margin: 0px !important;
         border: none !important;
         border-radius: 0px !important;
         line-height: 1 !important;
         
+        /* 겹침 처리 */
+        position: relative;
+        z-index: 1;
+        
+        /* 텍스트 꾸미기 */
         color: #000000 !important;
         text-shadow: 
             1.5px 0 #fff, -1.5px 0 #fff, 0 1.5px #fff, 0 -1.5px #fff,
             1px 1px #fff, -1px -1px #fff, 1px -1px #fff, -1px 1px #fff !important;
     }
 
-    /* 6. 마우스 올렸을 때 (가장 위로 올라오게) */
-    div.stButton > button:hover, div.stButton > button:focus, div.stButton > button:active {
+    /* 5. 마우스 올렸을 때 */
+    div.stButton > button:hover, div.stButton > button:focus {
         background-color: #f7e034 !important;
-        z-index: 9999 !important; /* 무조건 최상단 */
-        transform: scale(1.1) !important; /* 클릭하려 하면 살짝 전체 확대 */
+        z-index: 100 !important; /* 겹친 상태에서 위로 */
         outline: none !important;
-        box-shadow: 0 0 15px rgba(0,0,0,0.5);
     }
 
-    /* 7. 체스판 색상 */
+    /* 6. 체스판 색상 */
     div.stButton > button[kind="primary"] {
         background-color: #D18B47 !important;
     }
@@ -79,29 +73,25 @@ st.markdown("""
         background-color: #FFCE9E !important;
     }
 
-    /* 8. 사이드바 보호 (사이드바 버튼은 정상적으로 보이게) */
+    /* 7. 사이드바 버튼 등 다른 버튼은 정상적으로 표시 */
     section[data-testid="stSidebar"] div.stButton > button {
-        transform: none !important; /* 변형 해제 */
-        width: 100% !important;
-        border-radius: 8px !important;
-        margin-bottom: 10px !important;
-        padding: 0.5rem 1rem !important;
-        font-size: 16px !important;
-        text-shadow: none !important;
-    }
-    
-    /* 9. 좌표 폰트 스타일 */
-    .rank-label { 
-        font-weight: 900; font-size: 20px; color: #555; 
-        display: flex; align-items: center; justify-content: center; height: 100%;
-        margin-right: -10px; /* 숫자 좌표도 체스판 쪽으로 밀기 */
-    }
-    .file-label { 
-        font-weight: 900; font-size: 20px; color: #555; 
-        display: flex; justify-content: center; 
-        margin-top: -10px;
+        width: 100% !important; margin: 0 !important; margin-bottom: 10px !important;
+        height: auto !important; aspect-ratio: auto !important;
+        border-radius: 8px !important; font-size: 16px !important;
+        text-shadow: none !important; padding: 0.5rem 1rem !important;
     }
 
+    /* 8. 좌표 디자인 */
+    .rank-label {
+        font-weight: 900; font-size: 20px; color: #555;
+        display: flex; align-items: center; justify-content: center; height: 100%;
+        margin-right: -10px; padding-bottom: 15px; /* 줄 간격을 당겼으므로 좌표도 위치 보정 */
+    }
+    .file-label {
+        font-weight: 900; font-size: 20px; color: #555;
+        display: flex; justify-content: center; width: 100%;
+        margin-top: -5px; 
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -225,11 +215,11 @@ with main_col:
     files = range(8) if is_white else range(7, -1, -1)
     file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-    col_ratios = [0.7] + [2] * 8 # 비율은 유지
+    col_ratios = [0.7] + [2] * 8
 
-    # 1. 체스판 그리기
+    # 1. 체스판 루프
     for rank in ranks:
-        # gap="small" 옵션이 있어도 CSS가 !important로 무시해버립니다.
+        # gap="small"은 유지하되, CSS로 margin-bottom을 -15px로 당깁니다.
         cols = st.columns(col_ratios, gap="small")
         
         # 숫자 좌표
@@ -243,14 +233,15 @@ with main_col:
             is_dark = (rank + file) % 2 == 0
             btn_type = "primary" if is_dark else "secondary"
             
-            # 버튼 생성
             if cols[i+1].button(symbol, key=f"sq_{sq}", type=btn_type):
                 handle_click(sq)
                 st.rerun()
 
     # 2. 하단 좌표
+    # 체스판과 좌표 사이에도 여백이 생기지 않도록 CSS가 당겨줍니다.
     footer = st.columns(col_ratios, gap="small")
-    footer[0].markdown("<div></div>", unsafe_allow_html=True) # 빈칸
+    footer[0].markdown("<div></div>", unsafe_allow_html=True) 
+    
     for i, label in enumerate(file_labels):
         footer[i+1].markdown(f"<div class='file-label'>{label}</div>", unsafe_allow_html=True)
 
