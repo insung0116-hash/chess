@@ -7,110 +7,101 @@ import os
 # --- 페이지 설정 ---
 st.set_page_config(page_title="Classic Chess", page_icon="♟️", layout="wide")
 
-# --- CSS: 버튼을 108%로 키워서 틈새를 덮어버리는 전략 ---
+# --- CSS: 좌표와 보드를 분리하고, 보드 내부의 틈을 '삭제' ---
 st.markdown("""
 <style>
-    /* 1. 기본 배경 */
-    .stApp { background-color: #f4f4f4; }
+    /* 1. 기본 설정 */
+    .stApp { background-color: #dddddd; }
     
-    /* 2. Streamlit의 모든 컬럼 간격(Gap) 변수 0으로 강제 초기화 */
+    /* 2. 전역 변수 초기화 (가장 강력한 갭 제거) */
     :root {
         --column-gap: 0px !important;
         --row-gap: 0px !important;
     }
 
-    /* 3. 가로 줄(Row) 컨테이너 설정 */
-    div[data-testid="stHorizontalBlock"] {
-        gap: 0px !important;
-        padding: 0px !important;
-        margin-bottom: -16px !important; /* 세로 줄 간격 강제로 당김 */
-        display: flex !important;
-        flex-wrap: nowrap !important; /* 줄바꿈 절대 금지 */
+    /* 3. 체스판이 들어갈 컨테이너의 패딩/마진 제거 */
+    div.block-container {
+        padding-top: 2rem;
     }
 
-    /* 4. 세로 기둥(Column) 설정 */
+    /* 4. [핵심] 컬럼(Column) 강제 밀착 */
     div[data-testid="column"] {
         padding: 0px !important;
         margin: 0px !important;
-        flex: 1 !important; /* 비율대로 꽉 채움 */
-        min-width: 0 !important;
-    }
-    
-    /* 5. 버튼 감싸는 div 여백 제거 */
-    div.stButton {
-        padding: 0px !important;
-        margin: 0px !important;
-        width: 100% !important;
-        border: 0px !important;
-        line-height: 0 !important;
-    }
-    
-    /* 6. [핵심] 버튼 본체 스타일: 크기를 키워서 틈새 덮기 */
-    div.stButton > button {
-        /* 너비를 108%로 설정하여 옆 칸의 틈새를 덮습니다 */
-        width: 108% !important;
-        margin-left: -4% !important; /* 중앙 정렬 보정 */
-        
-        /* 높이도 살짝 키워서 위아래 틈새 덮기 */
-        height: 100% !important;
-        aspect-ratio: 1 / 1 !important;
-        
-        /* 폰트 및 디자인 */
-        font-size: 3vw !important; /* 반응형 폰트 크기 */
-        line-height: 1 !important;
-        
-        /* 테두리 및 여백 제거 */
-        padding: 0px !important;
-        border: none !important;
-        border-radius: 0px !important;
-        
-        /* 겹침 순서 조정 (안전장치) */
-        position: relative;
-        z-index: 1;
-        
-        /* 텍스트 스타일 */
-        color: #000000 !important;
-        text-shadow: 
-            1px 0 #fff, -1px 0 #fff, 0 1px #fff, 0 -1px #fff !important;
+        min-width: 0px !important;
+        /* Flexbox로 꽉 채우기 */
+        flex: 1 1 0% !important; 
     }
 
-    /* 7. 마우스 올렸을 때 강조 */
-    div.stButton > button:hover, div.stButton > button:focus {
+    /* 5. 가로 줄(Row) 컨테이너: 틈새 0 */
+    div[data-testid="stHorizontalBlock"] {
+        gap: 0px !important;
+        padding: 0px !important;
+        /* 아래 줄과의 간격 제거를 위해 음수 마진 사용 */
+        margin-bottom: -15px !important;
+    }
+
+    /* 6. 버튼 스타일 (체스판 칸) */
+    div.stButton > button {
+        width: 100% !important;
+        /* 정사각형 비율 강제 */
+        aspect-ratio: 1 / 1 !important;
+        border-radius: 0px !important;
+        border: none !important;
+        padding: 0px !important;
+        line-height: 1 !important;
+        
+        /* 폰트 반응형 크기 (화면 꽉 차게) */
+        font-size: 2.5vw !important; 
+        
+        /* 텍스트 그림자 (시인성) */
+        text-shadow: 2px 0 #fff, -2px 0 #fff, 0 2px #fff, 0 -2px #fff,
+                     1px 1px #fff, -1px -1px #fff, 1px -1px #fff, -1px 1px #fff !important;
+        color: black !important;
+        
+        /* 렌더링 틈새 방지용 box-shadow */
+        box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05); 
+    }
+
+    /* 7. 마우스 호버 효과 */
+    div.stButton > button:hover {
         background-color: #f7e034 !important;
-        z-index: 100 !important; /* 겹친 것들 위로 올라옴 */
-        transform: scale(1.1); /* 더 크게 확대 */
-        box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        outline: none !important;
+        transform: scale(1.05);
+        z-index: 99;
+        position: relative;
+        box-shadow: 0 0 10px rgba(0,0,0,0.5) !important;
     }
 
     /* 8. 체스판 색상 */
     div.stButton > button[kind="primary"] {
         background-color: #D18B47 !important;
-        border: 1px solid #D18B47 !important; /* 미세한 경계선 색상 일치 */
     }
     div.stButton > button[kind="secondary"] {
         background-color: #FFCE9E !important;
-        border: 1px solid #FFCE9E !important;
     }
 
-    /* 9. 좌표 스타일 */
-    .rank-label {
-        font-weight: 900; font-size: 20px; color: #555;
-        display: flex; align-items: center; justify-content: flex-end; 
-        height: 100%; padding-right: 10px;
-    }
-    .file-label {
-        font-weight: 900; font-size: 20px; color: #555;
-        display: flex; justify-content: center; width: 100%;
-        margin-top: 5px;
+    /* 9. 사이드바 및 컨트롤 버튼 스타일 복구 */
+    section[data-testid="stSidebar"] div.stButton > button,
+    div.control-panel div.stButton > button {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: auto !important;
+        border-radius: 8px !important;
+        font-size: 16px !important;
+        margin-bottom: 10px !important;
+        box-shadow: none !important;
+        padding: 0.5rem 1rem !important;
     }
     
-    /* 10. 사이드바 등 다른 버튼 보호 */
-    section[data-testid="stSidebar"] div.stButton > button, 
-    div[data-testid="stVerticalBlock"] > div > button {
-        width: 100% !important; aspect-ratio: auto !important;
-        border-radius: 5px !important; font-size: 16px !important;
-        padding: 0.5rem 1rem !important; margin: 0 0 10px 0 !important;
+    /* 10. 좌표 스타일 */
+    .rank-text {
+        font-size: 20px; font-weight: bold; color: #333;
+        display: flex; align-items: center; justify-content: flex-end;
+        height: 100%; padding-right: 15px; margin-top: -5px;
+    }
+    .file-text {
+        font-size: 20px; font-weight: bold; color: #333;
+        text-align: center; width: 100%; display: block;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -136,7 +127,7 @@ def play_engine_move(skill_level):
         engine.configure({"Skill Level": skill_level})
         result = engine.play(st.session_state.board, chess.engine.Limit(time=0.2))
         st.session_state.board.push(result.move)
-        st.session_state.redo_stack = []
+        st.session_state.redo_stack = [] 
         engine.quit()
         st.session_state.msg = "당신의 차례입니다."
     except: pass
@@ -169,7 +160,7 @@ def handle_click(sq):
             if m in st.session_state.board.legal_moves:
                 st.session_state.board.push(m)
                 st.session_state.selected_square = None
-                st.session_state.redo_stack = []
+                st.session_state.redo_stack = [] 
                 st.session_state.msg = "착수 완료"
             else:
                 p = st.session_state.board.piece_at(sq)
@@ -219,32 +210,38 @@ with st.sidebar:
         st.session_state.analysis_data = None
         st.rerun()
     st.divider()
+    # 컨트롤 패널 클래스 추가 (CSS 적용용)
+    st.markdown('<div class="control-panel">', unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1: 
         if st.button("⬅️ 무르기"): undo_move(); st.rerun()
     with c2: 
         if st.button("➡️ 되살리기"): redo_move(); st.rerun()
     if st.button("💡 힌트"): show_hint(); st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 메인 화면 ---
-main_col, info_col = st.columns([2, 1])
+# --- 메인 화면 레이아웃 분리 ---
+# 중요: 좌표용 컬럼과 체스판용 컬럼을 상위 레벨에서 완전히 분리합니다.
+layout_cols = st.columns([0.5, 5, 2]) # [좌표, 체스판, 정보창]
 
-with main_col:
+with layout_cols[0]: # 좌측 좌표 (1~8)
+    st.write("") # 상단 여백 보정
+    st.write("") 
     is_white = st.session_state.player_color == chess.WHITE
     ranks = range(7, -1, -1) if is_white else range(8)
+    for rank in ranks:
+        # 체스판 줄 간격에 맞추기 위해 투명 이미지나 빈 박스로 높이 조절 가능하나
+        # 여기서는 CSS .rank-text로 위치를 잡습니다.
+        st.markdown(f"<div class='rank-text' style='height: 60px; line-height: 60px;'>{rank + 1}</div>", unsafe_allow_html=True)
+
+with layout_cols[1]: # 중앙 체스판
     files = range(8) if is_white else range(7, -1, -1)
     file_labels = ['A','B','C','D','E','F','G','H'] if is_white else ['H','G','F','E','D','C','B','A']
 
-    # 좌표(0.6) + 8칸(1.0) 비율 설정
-    col_ratios = [0.6] + [1] * 8
-
-    # --- 1. 체스판 루프 ---
+    # 체스판 그리기 루프
     for rank in ranks:
-        # gap을 없앴지만, CSS에서 width: 108%를 적용했으므로 서로 겹치게 됩니다.
-        cols = st.columns(col_ratios)
-        
-        # 숫자 좌표
-        cols[0].markdown(f"<div class='rank-label'>{rank + 1}</div>", unsafe_allow_html=True)
+        # 여기서는 오직 8개의 컬럼만 생성합니다. (좌표 섞지 않음)
+        cols = st.columns(8) 
         
         for i, file in enumerate(files):
             sq = chess.square(file, rank)
@@ -254,18 +251,16 @@ with main_col:
             is_dark = (rank + file) % 2 == 0
             btn_type = "primary" if is_dark else "secondary"
             
-            # 버튼
-            if cols[i+1].button(symbol, key=f"sq_{sq}", type=btn_type):
+            if cols[i].button(symbol, key=f"sq_{sq}", type=btn_type):
                 handle_click(sq)
                 st.rerun()
-
-    # --- 2. 하단 좌표 ---
-    footer = st.columns(col_ratios)
-    footer[0].write("")
+    
+    # 하단 알파벳 좌표
+    footer_cols = st.columns(8)
     for i, label in enumerate(file_labels):
-        footer[i+1].markdown(f"<div class='file-label'>{label}</div>", unsafe_allow_html=True)
+        footer_cols[i].markdown(f"<div class='file-text'>{label}</div>", unsafe_allow_html=True)
 
-with info_col:
+with layout_cols[2]: # 우측 정보창
     st.info(st.session_state.msg)
     if st.session_state.board.is_check(): st.error("🔥 체크!")
     if st.session_state.board.is_game_over():
@@ -273,6 +268,7 @@ with info_col:
         if st.button("📊 분석"): analyze_game(); st.rerun()
     if st.session_state.analysis_data: st.line_chart(st.session_state.analysis_data)
 
+# AI 턴
 if not st.session_state.board.is_game_over() and st.session_state.board.turn != st.session_state.player_color:
     play_engine_move(skill)
     st.rerun()
