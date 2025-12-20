@@ -48,7 +48,7 @@ st.markdown("""
         border: none !important;
         border-radius: 0 !important;
         margin: 0 !important; padding: 0 !important;
-        transform: scale(1.25); 
+        transform: scale(1.05); 
         position: relative !important;
         overflow: hidden !important;
         z-index: 1;
