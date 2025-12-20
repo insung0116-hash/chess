@@ -98,7 +98,7 @@ st.markdown("""
     }
     .file-label {
         width: 100%; text-align: center; font-weight: bold; font-size: 20px; color: #333;
-        padding-top: 5px;
+        padding-top: 1px;
     }
     
     /* 9. 사이드바 버튼 리셋 및 크기 키우기 */
