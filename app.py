@@ -86,7 +86,7 @@ st.markdown("""
 
    /* 6. [핵심] 버튼 본체 스타일 */
     div.stButton > button {
-        width: 115% !important;        
+        width: 120% !important;        
         margin-left: -7.5% !important; 
         
         min-height: 50px !important;
@@ -111,7 +111,7 @@ st.markdown("""
 
     /* 7. [진짜 핵심] 버튼 내부의 모든 텍스트 요소(p, div, span)를 직접 타격하여 크기 키움 */
     div.stButton > button * {
-        font-size: 70px !important; /* PC 기준 매우 큼 */
+        font-size: 50px !important; /* PC 기준 매우 큼 */
         line-height: 1 !important;
         padding: 0 !important;
         margin: 0 !important;
