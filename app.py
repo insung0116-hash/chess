@@ -15,7 +15,7 @@ st.markdown("""
     .block-container {
         padding-top: 2rem !important;
         padding-bottom: 5rem;
-        max-width: 900px !important;
+        max-width: 1000px !important;
     }
 
     /* 2. [핵심] 컬럼(가로) 간격 완벽 제거 */
@@ -47,8 +47,8 @@ st.markdown("""
         padding: 0px !important;
         margin: 0px !important;
         
-        /* 미세한 하얀 선(1px)까지 덮기 위해 102%로 확대 */
-        transform: scale(1.02); 
+        /* 미세한 하얀 선(1px)까지 덮기 위해 150%로 확대 */
+        transform: scale(1.5); 
         
         position: relative !important;
         z-index: 1;
