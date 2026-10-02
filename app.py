@@ -89,8 +89,9 @@ st.markdown("""
     /* 9. 제목 스타일 */
     h1 { margin-top: 0px !important; margin-bottom: 20px !important; text-align: center; }
 
-    /* 10. 사이드바 버튼 스타일 복원 */
-    section[data-testid="stSidebar"] div.stButton > button {
+    /* 10. 사이드바 및 프로모션 버튼 스타일 복원 */
+    section[data-testid="stSidebar"] div.stButton > button,
+    .promo-box div.stButton > button {
         width: 100% !important;
         aspect-ratio: auto !important;
         background-color: white !important;
@@ -100,7 +101,9 @@ st.markdown("""
         height: 45px !important;
     }
     section[data-testid="stSidebar"] div.stButton > button p,
-    section[data-testid="stSidebar"] div.stButton > button span {
+    section[data-testid="stSidebar"] div.stButton > button span,
+    .promo-box div.stButton > button p,
+    .promo-box div.stButton > button span {
         font-size: 16px !important;
         font-weight: bold !important;
         color: #333 !important;
@@ -124,6 +127,7 @@ if 'player_color' not in st.session_state: st.session_state.player_color = chess
 if 'hint_move' not in st.session_state: st.session_state.hint_move = None
 if 'analysis_data' not in st.session_state: st.session_state.analysis_data = None
 if 'redo_stack' not in st.session_state: st.session_state.redo_stack = []
+if 'promotion_pending' not in st.session_state: st.session_state.promotion_pending = None
 
 stockfish_path = shutil.which("stockfish")
 if not stockfish_path and os.path.exists("/usr/games/stockfish"):
@@ -154,19 +158,32 @@ def show_hint():
 def handle_click(sq):
     if st.session_state.board.turn != st.session_state.player_color: return
     st.session_state.hint_move = None
+    
+    # 기물 선택 단계
     if st.session_state.selected_square is None:
         p = st.session_state.board.piece_at(sq)
         if p and p.color == st.session_state.board.turn:
             st.session_state.selected_square = sq
             st.session_state.msg = f"선택: {chess.square_name(sq)}"
     else:
+        # 선택 해제
         if st.session_state.selected_square == sq:
             st.session_state.selected_square = None
             st.session_state.msg = "취소"
         else:
-            m = chess.Move(st.session_state.selected_square, sq)
-            if st.session_state.board.piece_at(st.session_state.selected_square).piece_type == chess.PAWN and chess.square_rank(sq) in [0, 7]:
-                m.promotion = chess.QUEEN
+            from_sq = st.session_state.selected_square
+            piece = st.session_state.board.piece_at(from_sq)
+            
+            # 프로모션 검사 (폰이 마지막 행에 도달)
+            if piece and piece.piece_type == chess.PAWN and chess.square_rank(sq) in [0, 7]:
+                test_move = chess.Move(from_sq, sq, promotion=chess.QUEEN)
+                if test_move in st.session_state.board.legal_moves:
+                    st.session_state.promotion_pending = (from_sq, sq)
+                    st.session_state.msg = "승급할 기물을 선택하세요."
+                    return
+
+            # 일반 이동 처리
+            m = chess.Move(from_sq, sq)
             if m in st.session_state.board.legal_moves:
                 st.session_state.board.push(m)
                 st.session_state.selected_square = None
@@ -179,6 +196,16 @@ def handle_click(sq):
                     st.session_state.msg = "선택 변경"
                 else:
                     st.session_state.msg = "이동 불가"
+
+def apply_promotion(piece_type):
+    if st.session_state.promotion_pending:
+        from_sq, to_sq = st.session_state.promotion_pending
+        move = chess.Move(from_sq, to_sq, promotion=piece_type)
+        st.session_state.board.push(move)
+        st.session_state.selected_square = None
+        st.session_state.promotion_pending = None
+        st.session_state.redo_stack = []
+        st.session_state.msg = "승급 완료"
 
 def undo_move():
     if len(st.session_state.board.move_stack) >= 2:
@@ -198,7 +225,7 @@ st.title("♟️ Playing Chess with AI")
 
 # --- 사이드바 ---
 with st.sidebar:
-    st.header("⚙️ 게임 설정")
+    st.header("⚙️️ 게임 설정")
     color_opt = st.radio("진영 선택", ["White (선공)", "Black (후공)"])
     new_color = chess.WHITE if "White" in color_opt else chess.BLACK
     skill = st.slider("🤖 AI 레벨", 0, 20, 3)
@@ -218,17 +245,37 @@ with st.sidebar:
         st.session_state.player_color = new_color
         st.session_state.redo_stack = []
         st.session_state.analysis_data = None
+        st.session_state.promotion_pending = None
         st.rerun()
 
-# --- 상태 메시지 ---
+# --- 상태 메시지 및 프로모션 선택 UI ---
 status_container = st.container()
 with status_container:
-    if "체크!" in st.session_state.msg or "이동 불가" in st.session_state.msg:
-        st.error(st.session_state.msg, icon="⚠️")
-    elif "힌트" in st.session_state.msg:
-        st.warning(st.session_state.msg, icon="💡")
+    if st.session_state.promotion_pending:
+        st.warning("👑 승급할 기물을 선택하세요:", icon="👑")
+        st.markdown("<div class='promo-box'>", unsafe_allow_html=True)
+        p_cols = st.columns(4)
+        
+        # 기물 선택 옵션 (유니코드 기호 포함)
+        pieces = [
+            ("♛ 퀸", chess.QUEEN),
+            ("♜ 룩", chess.ROOK),
+            ("♝ 비숍", chess.BISHOP),
+            ("♞ 나이트", chess.KNIGHT)
+        ]
+        
+        for idx, (label, piece_type) in enumerate(pieces):
+            if p_cols[idx].button(label, key=f"promo_{piece_type}"):
+                apply_promotion(piece_type)
+                st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
     else:
-        st.info(st.session_state.msg, icon="📢")
+        if "체크!" in st.session_state.msg or "이동 불가" in st.session_state.msg:
+            st.error(st.session_state.msg, icon="⚠️")
+        elif "힌트" in st.session_state.msg:
+            st.warning(st.session_state.msg, icon="💡")
+        else:
+            st.info(st.session_state.msg, icon="📢")
 
     if st.session_state.board.is_check():
         st.error("🔥 체크! 왕이 위험합니다.", icon="🔥")
@@ -252,7 +299,6 @@ for rank in ranks:
         sq = chess.square(file, rank)
         piece = st.session_state.board.piece_at(sq)
         
-        # 기물이 없으면 유니코드 공백 문자 입력
         symbol = piece.unicode_symbol() if piece else "\u2800"
         
         is_dark = (rank + file) % 2 == 0
@@ -269,6 +315,6 @@ for i, label in enumerate(file_labels):
     footer[i+1].markdown(f"<div class='file-label'>{label}</div>", unsafe_allow_html=True)
 
 # AI 턴
-if not st.session_state.board.is_game_over() and st.session_state.board.turn != st.session_state.player_color:
+if not st.session_state.board.is_game_over() and st.session_state.board.turn != st.session_state.player_color and not st.session_state.promotion_pending:
     play_engine_move(skill)
     st.rerun()
